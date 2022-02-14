@@ -5,173 +5,99 @@
 """
 
 import pandas as pd
+import numpy as np
+
+import data_preprocess
+import design
 
 import streamlit as st
-
-import plotly.graph_objects as go
-
-from plotly.subplots import make_subplots
+import plotly.express as px
 
 
 if __name__ == '__main__':
+
+	st.set_page_config(layout="wide")
 
 	# User json format:
 	# User name, User ID; Income (dict) - it can be several incomes;
 	# Budget Categories (dict); Bank Account (dict); Investiments (dict)
 	# Spreed Sheet: link
 
-	user_info = {"User Name": "Lucas Félix", "User ID": 0, "Income": {0: 8500},
+	user_data = {"User Name": "Lucas Félix", "User ID": 0, "Income": 8500, "Last Income": 8500,
 				 "Budget Categories": {"Vestuário": 100, "Viagens": 200, "Eletrônicos": 200,
 				 "Saúde": 100, "Outros": 100, "Casa": 200, "Educação": 200, "Alimentação": 400,
 				 "Transporte": 300}, "Investiments": {}, "Spreed Sheet": 0}
 
-	# I need a login
 
-	# If the salary is brute we need to measure how much is the liquid
+	agg_df, og_df = data_preprocess.read_data(user_data)
 
-	# I need to automatically acess the sheet
+	design.remove_top_padding()
 
-	new_user = False
+	user_input = {}
 
-	if new_user:
-
-		# cadastration
-
-		# If it is a new user I need to take the infos as input
-
-		# I need to take as input the salary
-
-		pass
+	user_input['Plot Start Date'] = og_df['Data'].min()
+	user_input['Plot End Date'] = og_df['Data'].max()
+	user_input['Categories'] = og_df['Categoria'].unique()
 
 
-	else:
+	categories = og_df['Categoria'].unique()
 
-		pass
+	# sidebar infos
+	#user_input['Income'][0] = st.sidebar.number_input(label="Qual é o seu salário?", value=1200, min_value=0)
 
-		# Is not a new user
+	user_input['Plot Start Date'] = st.sidebar.date_input(label="Data de início da análise",
+														 value=user_input['Plot Start Date'],
+														 min_value=user_input['Plot Start Date'],
+														 max_value=user_input['Plot End Date'])
 
-		# We must update the spread sheet - user_sheet
-
-	user_sheet = pd.read_table("test.csv", sep=',', decimal=',')
-
-	# visualization filters
-	# by week, by month, by year, specific year, specific month
-
-	# What info will be shown:
-	# expenses per group
-	category_mean = user_sheet.groupby('Categoria').mean()
-	category_std = user_sheet.groupby('Categoria').std()
-	category_sum = user_sheet.groupby('Categoria').sum()
-
-	category_summary = category_mean.join(category_std, lsuffix=' std.')
-	category_summary = category_summary.join(category_sum, lsuffix=' sum').reset_index()
-
-	user_budget = pd.DataFrame(user_info["Budget Categories"].items(), columns=['Categoria', 'Limite'])
-
-	limits_df = user_budget.set_index("Categoria").join(category_sum, how='outer')
-
-	# filling quantia and limite
-	limits_df = limits_df.fillna(0)
-
-	# the sum of expenses is bigger than the budget?
-	limits_df['Ultrapassou'] = limits_df['Quantia'] >= limits_df['Limite']
+	user_input['Plot End Date'] = st.sidebar.date_input(label="Data final da análise",
+													    value=user_input['Plot End Date'],
+													    min_value=user_input['Plot Start Date'],
+														max_value=user_input['Plot End Date'])
 
 
-	def verify_surpassed_limit(value):
+	user_input['Selected Categories'] = st.sidebar.multiselect("Quais categorias gostaria de analisar?", user_input['Categories'],
+															   user_input['Categories'])
+
+	#print(og_df.shape)
+	# pre-process the data
+	# filtering by category
+	visualize_df = og_df[og_df['Categoria'].isin(user_input['Categories'])]
+
+	# filtering by date
+	visualize_df = visualize_df[(visualize_df['Data'].dt.date >= user_input['Plot Start Date']) &
+								(visualize_df['Data'].dt.date <= user_input['Plot End Date'])]
 
 
-		if value:
+	print(type(visualize_df['Data'].iloc[0]))
 
-			return 'red'
-
-		return 'black'
-
-	limits_df['Color'] = limits_df['Ultrapassou'].apply(lambda value: verify_surpassed_limit(value))
+	visualize_df['Data'] = visualize_df['Data'].dt.strftime('%d/%m/%Y')
 
 
-	limits_df.reset_index(inplace=True)
+	# main indicators
+	#col1, col2, col3, col4 = st.columns(4)
+
+	col1, _, col2 = st.columns((70, 5, 25))
 
 
+	temporal_graph = px.line(visualize_df, x='Data', y="Quantia")
 
-	# https://plotly.com/python/table-subplots/
+	col1.plotly_chart(temporal_graph, use_container_width=True)
 
-	fig = make_subplots(
-    rows=3, cols=1,
-    shared_xaxes=True,
-    vertical_spacing=0.03,
-    specs=[[{"type": "table"}],
-           [{"type": "scatter"}],
-           [{"type": "scatter"}]]
-	)
+	category_graph = px.histogram(visualize_df, x="Month", y="Quantia", color='Categoria', barmode='group', width=400)
 
-	fig.add_trace(
-	    go.Scatter(
-	        x=user_sheet["Data"],
-	        y=user_sheet["Quantia"],
-	        mode="lines",
-	        name="Valor gasto por dia"
-	    ),
-	    row=3, col=1
-	)
+	col1.plotly_chart(category_graph, use_container_width=True)
 
-	# Data	Categoria	Descrição	Quantia	Modalidade (Cŕedito/Pix/Débito/Boleto)	Dividido
+	print(col1)
 
-	user_sheet = user_sheet.rename(columns={"Modalidade (Cŕedito/Pix/Débito/Boleto)": "Modalidade"})
+	col1.dataframe(visualize_df, width=1000)
 
-	user_sheet['Data'] = pd.to_datetime(user_sheet['Data'], format='%d/%m/%Y').astype(str)
 
-	fig.add_trace(
-	    go.Table(
-	        header=dict(
-	            values=["Data", "Categoria", "Descrição",
-	                    "Quantia", "Modalidade", "Dividido"],
-	            font=dict(size=10),
-	            align="left"
-	        ),
-	        cells=dict(
-	            values=[user_sheet[k].tolist() for k in user_sheet.columns],
-	            align = "left")
-	    ),
-	    row=1, col=1
-	)
+	col2.metric("Salário:", str(user_data['Income']) + ' R$', str(user_data['Income'] - user_data['Last Income']) + ' R$')
+	col2.metric("Gasto:", str(visualize_df['Quantia'].sum().round(2)) + " R$", "-8%")
+	col2.metric("Economizado:", "86%", "4%")
+	col2.metric("Poupança: ", str(og_df[og_df['Categoria'] == 'Poupança']['Quantia'].sum().round(2)) + " R$")
 
-	a = limits_df['Color']
-
-	colors = [['black'] * len(a), a, ['black'] * len(a)]
-
-	fig.add_trace(go.Table(
-                 columnwidth= [15]+[15]+[15],
-                 columnorder=[0, 1, 2],
-                 header = dict(height = 50,
-                               values = [['<b>Limite</b>'], ['<b>Quantia</b>'], ["<b>Categoria</b>"]],
-                               line = dict(color='rgb(50,50,50)'),
-                               align = ['left']*2,
-                               font = dict(color=['rgb(45,45,45)']*2, size=14),
-                             
-                              ),
-                 cells = dict(values = [limits_df['Limite'], limits_df['Quantia'], limits_df['Categoria']],
-                              line = dict(color='#506784'),
-                              align = ['left']*5,
-                              font = dict(family="Arial", size=14, color=colors),
-                              height = 30,
-                              fill = dict(color='rgb(245,245,245)'))
-                             ))
-
-	fig.update_layout(
-	    height=800,
-	    showlegend=False,
-	    title_text="Quantias gastas",
-	)
-
-	fig.show()
-
-	# I need to consume for each user the budgets for their categories
-
-	# I need to automatically measure if any category is exploding any budget
-
-	# Measure all
-
-	# Show the dash
 
  
 
