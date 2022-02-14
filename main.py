@@ -4,6 +4,7 @@
 
 """
 
+import datetime
 import pandas as pd
 import numpy as np
 
@@ -62,14 +63,34 @@ if __name__ == '__main__':
 	#print(og_df.shape)
 	# pre-process the data
 	# filtering by category
-	visualize_df = og_df[og_df['Categoria'].isin(user_input['Categories'])]
+	visualize_df = og_df[og_df['Categoria'].isin(user_input['Selected Categories'])]
 
 	# filtering by date
 	visualize_df = visualize_df[(visualize_df['Data'].dt.date >= user_input['Plot Start Date']) &
 								(visualize_df['Data'].dt.date <= user_input['Plot End Date'])]
 
+	# will be a user input
+	investiments_category = ['Investimentos', 'Poupança']
 
-	print(type(visualize_df['Data'].iloc[0]))
+	current_date = datetime.datetime.now()
+
+	# current year data
+	year_df = visualize_df[visualize_df['Data'].dt.year == current_date.year]
+
+	# what are the expenses in relation what was expend next year in the same period
+	last_year_df = visualize_df[(visualize_df['Data'].dt.year == current_date.year - 1) &
+								(visualize_df['Data'].dt.month <= year_df['Data'].dt.month.max())]
+
+	metrics = {"Current Year Expenses": year_df[~year_df['Categoria'].isin(investiments_category)]['Quantia'].sum().round(2),
+			   "Last Year Expenses": last_year_df[~last_year_df['Categoria'].isin(investiments_category)]['Quantia'].sum().round(2),
+			   "Current Savings": year_df[year_df['Categoria'].isin(investiments_category)]['Quantia'].sum().round(2),
+			   "Last Year Savings": last_year_df[last_year_df['Categoria'].isin(investiments_category)]['Quantia'].sum().round(2),
+			   "Total Saved": visualize_df['Quantia'].sum().round(2)}
+
+	metrics['Expenses Color'] = "inverse" if metrics['Current Year Expenses'] >= metrics['Last Year Expenses'] else "normal"
+
+	# if last year is bigger than current it means that you are saving money
+	metrics['Expenses Delta'] = metrics['Last Year Expenses'] - metrics['Current Year Expenses']
 
 	visualize_df['Data'] = visualize_df['Data'].dt.strftime('%d/%m/%Y')
 
@@ -88,15 +109,23 @@ if __name__ == '__main__':
 
 	col1.plotly_chart(category_graph, use_container_width=True)
 
-	print(col1)
-
 	col1.dataframe(visualize_df, width=1000)
 
+	col2.header('Anual:')
 
-	col2.metric("Salário:", str(user_data['Income']) + ' R$', str(user_data['Income'] - user_data['Last Income']) + ' R$')
-	col2.metric("Gasto:", str(visualize_df['Quantia'].sum().round(2)) + " R$", "-8%")
-	col2.metric("Economizado:", "86%", "4%")
-	col2.metric("Poupança: ", str(og_df[og_df['Categoria'] == 'Poupança']['Quantia'].sum().round(2)) + " R$")
+	col2.metric("Gasto:", str(metrics['Current Year Expenses'])+ " R$", str(metrics['Last Year Expenses']) + " R$", delta_color=metrics['Expenses Color'])
+
+	if metrics['Expenses Delta'] > 0:
+
+		# the delta will be compared to the last month
+		col2.metric("Economizado:", metrics['Last Year Expenses']/metrics['Current Year Expenses'])
+
+	else:
+
+		col2.metric("Gasto a mais:", metrics['Last Year Expenses']/metrics['Current Year Expenses'])
+
+	col2.metric("Poupança & Investimentos: ", str(metrics['Current Savings']) + " R$",
+											  str(metrics['Last Year Savings']) + " R$")
 
 
  
