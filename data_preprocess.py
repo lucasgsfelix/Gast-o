@@ -1,5 +1,9 @@
-import gdown
+
+import datetime
 import pandas as pd
+import numpy as np
+
+from dateutil.relativedelta import relativedelta
 
 
 def verify_surpassed_limit(value):
@@ -81,3 +85,35 @@ def mesuare_filtered_quanty(df, query, expenses=True, savings_categories=['Poupa
 		filtered_df = df[(query) & (df['Categoria'].isin(savings_categories))]
 
 	return filtered_df['Quantia'].sum().round(2)
+
+
+def measure_kpis(df):
+
+	current_date = datetime.datetime.now()
+
+	last_date = current_date - relativedelta(months=1)
+
+	metrics = {
+			    "Current Expenses": mesuare_filtered_quanty(df, (df['Data'].dt.year == current_date.year), True),
+				"Current Savings": mesuare_filtered_quanty(df, (df['Data'].dt.year == current_date.year), False),
+				"Last Expenses": mesuare_filtered_quanty(df, (df['Data'].dt.year == last_date.year - 1), True),
+				"Last Savings": mesuare_filtered_quanty(df, (df['Data'].dt.year == last_date.year - 1), False),
+				"Total Saved": 0
+			  }
+
+
+	metrics['Percentage Expend'] = (metrics['Current Expenses']/metrics['Last Expenses']) * 100
+	metrics['Diff'] = np.abs(metrics['Current Expenses'] - metrics['Last Expenses']).round(2)
+
+	monthly_metrics = {
+					    "Current Expenses": mesuare_filtered_quanty(df, (df['Data'].dt.month == current_date.month) & (df['Data'].dt.year == current_date.year), True),
+						"Current Savings": mesuare_filtered_quanty(df, (df['Data'].dt.month == current_date.month) & (df['Data'].dt.year == current_date.year), False),
+						"Last Expenses": mesuare_filtered_quanty(df, (df['Data'].dt.month == last_date.month) & (df['Data'].dt.year == last_date.year), True),
+						"Last Savings": mesuare_filtered_quanty(df, (df['Data'].dt.month == last_date.month) & (df['Data'].dt.year == last_date.year), False)
+					  }
+
+	monthly_metrics['Percentage Expend'] = (monthly_metrics['Current Expenses']/monthly_metrics['Last Expenses']) * 100
+	monthly_metrics['Diff'] = np.abs(monthly_metrics['Current Expenses'] - monthly_metrics['Last Expenses']).round(2)
+
+
+	return metrics, monthly_metrics
