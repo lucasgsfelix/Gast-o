@@ -63,7 +63,6 @@ if __name__ == '__main__':
 	user_input['Selected Categories'] = st.sidebar.multiselect("Quais categorias gostaria de analisar?", user_input['Categories'],
 															   user_input['Categories'])
 
-	#print(og_df.shape)
 	# pre-process the data
 	# filtering by category
 	visualize_df = og_df[og_df['Categoria'].isin(user_input['Selected Categories'])]
@@ -95,13 +94,12 @@ if __name__ == '__main__':
 	# if last year is bigger than current it means that you are saving money
 	metrics['Expenses Delta'] = metrics['Last Year Expenses'] - metrics['Current Year Expenses']
 
-	
-
 
 	# main indicators
 	#col1, col2, col3, col4 = st.columns(4)
-
 	col1, _, col2 = st.columns((70, 5, 25))
+
+	visualize_df = visualize_df.sort_values('Data')
 
 
 	temporal_graph = px.line(visualize_df, x='Data', y="Quantia")
@@ -163,7 +161,7 @@ if __name__ == '__main__':
 
 	else:
 
-		col2.metric("Gasto a mais:", "R$ " + (monthly_metrics['Diff']), str(monthly_metrics['Percentage Expend'].round(2)) + '%')
+		col2.metric("Gasto a mais:", "R$ " + str(monthly_metrics['Diff']), str(monthly_metrics['Percentage Expend'].round(2)) + '%')
 
 
 	visualize_df['Data'] = visualize_df['Data'].dt.strftime('%d/%m/%Y')

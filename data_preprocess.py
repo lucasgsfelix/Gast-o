@@ -1,3 +1,4 @@
+import gdown
 import pandas as pd
 
 
@@ -9,9 +10,26 @@ def verify_surpassed_limit(value):
 
 	return 'black'
 
+
+def download_google_drive_sheet(link):
+
+	link = "https://docs.google.com/spreadsheets/d/1iPDOgYOE6KL6FWMaToQ5fiQw5VtxbSyhSxDBLwLqiZ4/edit?usp=sharing"
+
+	sheet_id = link.split('/')[-2]
+
+	sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_id + "/edit#gid=0"
+
+	url_1 = sheet_url.replace('/edit#gid=', '/export?format=csv&gid=')
+
+	df = pd.read_table(url_1, sep=',', decimal=',')
+
+	return df
+
+
 def read_data(user_info):
 
-	user_sheet = pd.read_table("test_b.csv", sep=',', decimal=',')
+
+	user_sheet = download_google_drive_sheet(None)
 
 	# visualization filters
 	# by week, by month, by year, specific year, specific month
@@ -35,9 +53,7 @@ def read_data(user_info):
 	# the sum of expenses is bigger than the budget?
 	limits_df['Ultrapassou'] = limits_df['Quantia'] >= limits_df['Limite']
 
-
 	limits_df['Color'] = limits_df['Ultrapassou'].apply(lambda value: verify_surpassed_limit(value))
-
 
 	limits_df.reset_index(inplace=True)
 
@@ -47,7 +63,6 @@ def read_data(user_info):
 
 
 	return limits_df, user_sheet
-
 
 
 def mesuare_filtered_quanty(df, query, expenses=True, savings_categories=['Poupança', 'Investimentos']):
