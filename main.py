@@ -27,13 +27,9 @@ if __name__ == '__main__':
 	# Budget Categories (dict); Bank Account (dict); Investiments (dict)
 	# Spreed Sheet: link
 
-	user_data = {"User Name": "Lucas Félix", "User ID": 0, "Income": 8500, "Last Income": 8500,
-				 "Budget Categories": {"Vestuário": 100, "Viagens": 200, "Eletrônicos": 200,
-				 "Saúde": 100, "Outros": 100, "Casa": 200, "Educação": 200, "Alimentação": 400,
-				 "Transporte": 300}, "Investiments": {}, "Spreed Sheet": 0}
+	user_data = data_preprocess.define_user_data()
 
-
-	agg_df, og_df = data_preprocess.read_data(user_data)
+	og_df = data_preprocess.read_data(user_data)
 
 	design.remove_top_padding()
 
@@ -79,7 +75,7 @@ if __name__ == '__main__':
 
 	# main indicators
 	#col1, col2, col3, col4 = st.columns(4)
-	col1, _, col2 = st.columns((70, 5, 25))
+	col1, subcol, col2 = st.columns((70, 5, 25))
 
 	visualize_df = visualize_df.sort_values('Data')
 
@@ -94,7 +90,7 @@ if __name__ == '__main__':
 
 	visualize_df['Data'] = visualize_df['Data'].dt.strftime('%d/%m/%Y')
 
-	col1.dataframe(visualize_df, width=1000)
+	col1.dataframe(visualize_df.drop(['Mês'], axis=1), width=1000)
 
 	
 	# anual
@@ -112,7 +108,15 @@ if __name__ == '__main__':
 
 			start_time, end_time = st.columns(2)
 
-			info['Category'] = st.selectbox("Categoria", user_input['Categories'])
-			info['Budget'] = st.number_input("Limite de Gasto", min_value=0, value=500)
+			info['Categoria'] = st.selectbox("Categoria", user_input['Categories'])
+			info['Limite'] = st.number_input("Limite de Gasto", min_value=0, value=500)
 
 			st.form_submit_button()
+
+			user_data['Budget Categories'] = {**user_data['Budget Categories'], info['Categoria']: info['Limite']}
+
+
+	limits_table = data_preprocess.define_limits_table(visualize_df, user_data)
+
+	col1.dataframe(limits_table.drop(['Dividido', 'Mês', 'Ultrapassou', 'Color'], axis=1).style.highlight_max(axis=1), width=1000)
+

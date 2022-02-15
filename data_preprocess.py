@@ -2,6 +2,7 @@
 import datetime
 import pandas as pd
 import numpy as np
+import streamlit as st
 
 from dateutil.relativedelta import relativedelta
 
@@ -30,19 +31,38 @@ def download_google_drive_sheet(link):
 	return df
 
 
-def read_data(user_info):
+@st.cache(allow_output_mutation=True, show_spinner=False)
+def read_data(user_info, link=None):
+
+	user_sheet = download_google_drive_sheet(link)
+
+	user_sheet['Data'] = pd.to_datetime(user_sheet['Data'], format='%d/%m/%Y')
+
+	user_sheet['Mês'] = user_sheet['Data'].dt.month
+
+	return user_sheet
 
 
-	user_sheet = download_google_drive_sheet(None)
+@st.cache(allow_output_mutation=True, show_spinner=False)
+def define_user_data():
+
+	user_data = {"User Name": "Lucas Félix", "User ID": 0, "Income": 8500, "Last Income": 8500,
+				 "Budget Categories": {}, "Investiments": {}}
+
+
+	return user_data
+
+
+def define_limits_table(df, user_info):
 
 	# visualization filters
 	# by week, by month, by year, specific year, specific month
 
 	# What info will be shown:
 	# expenses per group
-	category_mean = user_sheet.groupby('Categoria').mean()
-	category_std = user_sheet.groupby('Categoria').std()
-	category_sum = user_sheet.groupby('Categoria').sum()
+	category_mean = df.groupby('Categoria').mean()
+	category_std = df.groupby('Categoria').std()
+	category_sum = df.groupby('Categoria').sum()
 
 	category_summary = category_mean.join(category_std, lsuffix=' std.')
 	category_summary = category_summary.join(category_sum, lsuffix=' sum').reset_index()
@@ -61,12 +81,7 @@ def read_data(user_info):
 
 	limits_df.reset_index(inplace=True)
 
-	user_sheet['Data'] = pd.to_datetime(user_sheet['Data'], format='%d/%m/%Y')
-
-	user_sheet['Mês'] = user_sheet['Data'].dt.month
-
-
-	return limits_df, user_sheet
+	return limits_df
 
 
 def mesuare_filtered_quanty(df, query, expenses=True, savings_categories=['Poupança', 'Investimentos']):
