@@ -5,8 +5,11 @@
 """
 
 import datetime
+from dateutil.relativedelta import relativedelta
+
 import pandas as pd
 import numpy as np
+
 
 import data_preprocess
 import design
@@ -92,7 +95,7 @@ if __name__ == '__main__':
 	# if last year is bigger than current it means that you are saving money
 	metrics['Expenses Delta'] = metrics['Last Year Expenses'] - metrics['Current Year Expenses']
 
-	visualize_df['Data'] = visualize_df['Data'].dt.strftime('%d/%m/%Y')
+	
 
 
 	# main indicators
@@ -105,15 +108,18 @@ if __name__ == '__main__':
 
 	col1.plotly_chart(temporal_graph, use_container_width=True)
 
-	category_graph = px.histogram(visualize_df, x="Month", y="Quantia", color='Categoria', barmode='group', width=400)
+	category_graph = px.histogram(visualize_df, x="Mês", y="Quantia", color='Categoria',
+								  barmode='group', width=400,).update_layout(yaxis_title="Quantidade Gasta")
 
 	col1.plotly_chart(category_graph, use_container_width=True)
 
-	col1.dataframe(visualize_df, width=1000)
-
 	col2.header('Anual:')
 
-	col2.metric("Gasto:", str(metrics['Current Year Expenses'])+ " R$", str(metrics['Last Year Expenses']) + " R$", delta_color=metrics['Expenses Color'])
+	col2.metric('Salário ', str(user_data['Income'] * current_date.month))
+
+	col2.metric("Gasto:", "R$ " + str(metrics['Current Year Expenses']),
+				"R$ " + str(metrics['Last Year Expenses']),
+				delta_color=metrics['Expenses Color'])
 
 	if metrics['Expenses Delta'] > 0:
 
@@ -124,8 +130,46 @@ if __name__ == '__main__':
 
 		col2.metric("Gasto a mais:", metrics['Last Year Expenses']/metrics['Current Year Expenses'])
 
-	col2.metric("Poupança & Investimentos: ", str(metrics['Current Savings']) + " R$",
-											  str(metrics['Last Year Savings']) + " R$")
+	col2.metric("Poupança & Investimentos: ", "R$ " + str(metrics['Current Savings']),
+											  "R$ " + str(metrics['Last Year Savings']))
+
+
+	col2.header('Mensal:')
+	col2.metric('Salário ', "R$ " + str(user_data['Income']))
+
+	last_date = current_date - relativedelta(months=1)
+
+	# year month df expenses df
+	monthly_metrics = {
+						    "Current Expenses": data_preprocess.mesuare_filtered_quanty(visualize_df, (visualize_df['Data'].dt.month == current_date.month) &
+												(visualize_df['Data'].dt.year == current_date.year), True),
+							"Current Savings": data_preprocess.mesuare_filtered_quanty(visualize_df, (visualize_df['Data'].dt.month == current_date.month) &
+												(visualize_df['Data'].dt.year == current_date.year), False),
+							"Last Expenses": data_preprocess.mesuare_filtered_quanty(visualize_df, (visualize_df['Data'].dt.month == last_date.month) &
+												(visualize_df['Data'].dt.year == last_date.year), True),
+							"Last Savings": data_preprocess.mesuare_filtered_quanty(visualize_df, (visualize_df['Data'].dt.month == last_date.month) &
+												(visualize_df['Data'].dt.year == last_date.year), False)
+					  }
+
+
+	monthly_metrics['Percentage Expend'] = (monthly_metrics['Current Expenses']/monthly_metrics['Last Expenses']) * 100
+	monthly_metrics['Diff'] = np.abs(monthly_metrics['Current Expenses'] - monthly_metrics['Last Expenses']).round(2)
+
+
+	if monthly_metrics['Percentage Expend'] < 100:
+
+		# the delta will be compared to the last month
+		col2.metric("Economizado:",  "R$ " + str((monthly_metrics['Diff'])), str(monthly_metrics['Percentage Expend'].round(2)) + '%')
+
+	else:
+
+		col2.metric("Gasto a mais:", "R$ " + (monthly_metrics['Diff']), str(monthly_metrics['Percentage Expend'].round(2)) + '%')
+
+
+	visualize_df['Data'] = visualize_df['Data'].dt.strftime('%d/%m/%Y')
+
+	col1.dataframe(visualize_df, width=1000)
+
 
 
  

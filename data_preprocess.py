@@ -43,8 +43,26 @@ def read_data(user_info):
 
 	user_sheet['Data'] = pd.to_datetime(user_sheet['Data'], format='%d/%m/%Y')
 
-	user_sheet['Month'] = user_sheet['Data'].dt.month
+	user_sheet['Mês'] = user_sheet['Data'].dt.month
 
 
 	return limits_df, user_sheet
 
+
+
+def mesuare_filtered_quanty(df, query, expenses=True, savings_categories=['Poupança', 'Investimentos']):
+	"""
+		If expenses, then do not consider the savings categories
+		Else, only consider savings coluns
+
+	"""
+
+	if expenses:
+
+		filtered_df = df[(query) & (~df['Categoria'].isin(savings_categories))]
+
+	else:
+
+		filtered_df = df[(query) & (df['Categoria'].isin(savings_categories))]
+
+	return filtered_df['Quantia'].sum().round(2)
