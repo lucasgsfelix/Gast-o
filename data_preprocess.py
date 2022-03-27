@@ -58,6 +58,10 @@ def define_limits_table(df, user_info):
 	# visualization filters
 	# by week, by month, by year, specific year, specific month
 
+	current_month = datetime.datetime.now().month
+
+	df = df[df['Mês'] == current_month]
+
 	# What info will be shown:
 	# expenses per group
 	category_mean = df.groupby('Categoria').mean()

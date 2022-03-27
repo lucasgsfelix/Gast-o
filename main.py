@@ -31,6 +31,8 @@ if __name__ == '__main__':
 
 	og_df = data_preprocess.read_data(user_data)
 
+	og_df = og_df.dropna()
+
 	design.remove_top_padding()
 
 	user_input = {}
@@ -38,6 +40,8 @@ if __name__ == '__main__':
 	user_input['Plot Start Date'] = og_df['Data'].min()
 	user_input['Plot End Date'] = og_df['Data'].max()
 	user_input['Categories'] = og_df['Categoria'].unique()
+	user_input['Expenses'] = ['Luz', 'Aluguel', 'Internet', 'Condomínio', 'Celular']
+	user_input['Savings'] = ['Poupança']
 
 
 	categories = og_df['Categoria'].unique()
@@ -68,9 +72,17 @@ if __name__ == '__main__':
 								(visualize_df['Data'].dt.date <= user_input['Plot End Date'])]
 
 
+	user_input['Expenses'] = st.sidebar.multiselect("Quais são os seus gastos mensais?", visualize_df['Descrição'].unique(),
+															   user_input['Expenses'])
+
+	user_input['Savings'] = st.sidebar.multiselect("Quais são suas categorias de economia?", visualize_df['Categoria'].unique(),
+															   user_input['Savings'])
+
+
 	metrics, monthly_metrics = data_preprocess.measure_kpis(visualize_df)
 
 
+	## What are your monthly costs? Luz, aluguel, internet, condomínio, celular
 
 
 	# main indicators
@@ -79,6 +91,8 @@ if __name__ == '__main__':
 
 	visualize_df = visualize_df.sort_values('Data')
 
+	col1.markdown("## Visualização temporal de gastos:")
+
 	temporal_graph = px.line(visualize_df, x='Data', y="Quantia")
 
 	col1.plotly_chart(temporal_graph, use_container_width=True)
@@ -86,9 +100,13 @@ if __name__ == '__main__':
 	category_graph = px.histogram(visualize_df, x="Mês", y="Quantia", color='Categoria',
 								  barmode='group', width=400,).update_layout(yaxis_title="Quantidade Gasta")
 
+	col1.markdown("## Gastos por categoria:")
+
 	col1.plotly_chart(category_graph, use_container_width=True)
 
 	visualize_df['Data'] = visualize_df['Data'].dt.strftime('%d/%m/%Y')
+
+	col1.markdown("## Gastos:")
 
 	col1.dataframe(visualize_df.drop(['Mês'], axis=1), width=1000)
 
@@ -98,6 +116,9 @@ if __name__ == '__main__':
 
 	# monthly
 	visualization.plot_kpis(monthly_metrics, "Mensal", col2, user_data)
+
+
+	visualization.plot_paid_monthly_expensives(visualize_df, col2, user_input['Expenses'])
 
  
 	with st.sidebar.expander("Qual é o limite de gasto para cada categoria?"):
@@ -115,6 +136,8 @@ if __name__ == '__main__':
 
 			user_data['Budget Categories'] = {**user_data['Budget Categories'], info['Categoria']: info['Limite']}
 
+
+	col1.markdown("## Limite de gastos por categoria mensal:")
 
 	limits_table = data_preprocess.define_limits_table(visualize_df, user_data)
 
