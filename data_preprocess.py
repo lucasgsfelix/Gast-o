@@ -32,6 +32,62 @@ def download_google_drive_sheet(link):
 
 
 @st.cache(allow_output_mutation=True, show_spinner=False)
+def define_credit_card_expenses(user_sheet):
+
+	user_sheet['Dividido'] = user_sheet['Dividido'].fillna(1)
+
+	mode_columns = 'Modalidade (Cŕedito/Pix/Débito/Boleto)'
+
+	credit_expenses = user_sheet[user_sheet[mode_columns] == 'Crédito']
+
+	credit_expenses['Quantia'] = credit_expenses['Quantia']/credit_expenses['Dividido']
+
+	credit_expenses['Data'] = pd.to_datetime(credit_expenses['Data'], format="%d/%m/%Y")
+
+	treated_expenses = []
+
+	# cumsum of the divided per index
+	for index in credit_expenses.index:
+
+		one_expense = credit_expenses[credit_expenses.index == index]
+
+		if one_expense['Dividido'].max() > 1:
+
+
+			# one dataframe repeated several times, one per time that was divided that bill
+			expense = pd.concat([one_expense for _ in range(0, int(one_expense['Dividido'].max()))]).reset_index()
+
+			expense.index = expense.index + 1
+
+			expense['Descrição'] = expense['Descrição'] + ' ' + expense.index.astype(str) + '/' + str(expense.index.max())
+
+			expense['Relative Months'] = list(map(lambda x: relativedelta(months=x), expense.index))
+
+
+			expense['Data'] = expense.apply(lambda row: row['Data'] + row['Relative Months'], axis=1)
+
+			expense = expense.drop(['Relative Months'], axis=1)
+
+
+		else:
+
+
+			expense = one_expense
+
+		treated_expenses.append(expense)
+
+	credit_expenses = pd.concat(treated_expenses)
+
+	credit_expenses['Dividido'] = 1
+
+	# removing that total expense em dividing it in minor expenses
+	user_sheet = user_sheet[user_sheet[mode_columns] != 'Crédito']
+
+	return user_sheet.append(credit_expenses).reset_index()
+
+
+
+@st.cache(allow_output_mutation=True, show_spinner=False)
 def read_data(user_info, link=None):
 
 	user_sheet = download_google_drive_sheet(link)
@@ -40,13 +96,15 @@ def read_data(user_info, link=None):
 
 	user_sheet['Mês'] = user_sheet['Data'].dt.month
 
+	user_sheet = define_credit_card_expenses(user_sheet)
+
 	return user_sheet
 
 
 @st.cache(allow_output_mutation=True, show_spinner=False)
 def define_user_data():
 
-	user_data = {"User Name": "Lucas Félix", "User ID": 0, "Income": 8500, "Last Income": 8500,
+	user_data = {"User Name": "Lucas Félix", "User ID": 0, "Income": 0, "Last Income": 0,
 				 "Budget Categories": {}, "Investiments": {}}
 
 
@@ -111,6 +169,14 @@ def measure_kpis(df):
 	current_date = datetime.datetime.now()
 
 	last_date = current_date - relativedelta(months=1)
+
+	mode_columns = 'Modalidade (Cŕedito/Pix/Débito/Boleto)'
+
+
+	# What if: The user pays his credit card with another credit card?
+	df = df[df[mode_columns] != 'Crédito']
+
+
 
 	metrics = {
 			    "Current Expenses": mesuare_filtered_quanty(df, (df['Data'].dt.year == current_date.year), True),

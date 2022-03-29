@@ -27,27 +27,34 @@ if __name__ == '__main__':
 	# Budget Categories (dict); Bank Account (dict); Investiments (dict)
 	# Spreed Sheet: link
 
+	design.remove_top_padding()
+
 	user_data = data_preprocess.define_user_data()
 
 	og_df = data_preprocess.read_data(user_data)
 
-	og_df = og_df.dropna()
 
-	design.remove_top_padding()
+	og_df = og_df.dropna(subset=['Data', 'Quantia'])
 
+	og_df['Categoria'] = og_df['Categoria'].fillna('Outros - Adicionado Automaticamente')
+
+	og_df['Dividido'] = og_df['Dividido'].fillna(1)
+
+
+	# we will ask the user to input this data
 	user_input = {}
-
 	user_input['Plot Start Date'] = og_df['Data'].min()
 	user_input['Plot End Date'] = og_df['Data'].max()
 	user_input['Categories'] = og_df['Categoria'].unique()
 	user_input['Expenses'] = ['Luz', 'Aluguel', 'Internet', 'Condomínio', 'Celular']
 	user_input['Savings'] = ['Poupança']
+	user_input['Income'] = ['Salário']
 
+	user_input['Categories'] = list(filter(lambda category: (category not in user_input['Savings']) and
+															(category not in user_input['Income']), user_input['Categories']))
 
 	categories = og_df['Categoria'].unique()
 
-	# sidebar infos
-	#user_input['Income'][0] = st.sidebar.number_input(label="Qual é o seu salário?", value=1200, min_value=0)
 
 	user_input['Plot Start Date'] = st.sidebar.date_input(label="Data de início da análise",
 														 value=user_input['Plot Start Date'],
@@ -75,7 +82,10 @@ if __name__ == '__main__':
 	user_input['Expenses'] = st.sidebar.multiselect("Quais são os seus gastos mensais?", visualize_df['Descrição'].unique(),
 															   user_input['Expenses'])
 
-	user_input['Savings'] = st.sidebar.multiselect("Quais são suas categorias de economia?", visualize_df['Categoria'].unique(),
+
+	economy_categories = list(visualize_df['Categoria'].unique()) + user_input['Savings']
+
+	user_input['Savings'] = st.sidebar.multiselect("Quais são suas categorias de economia?", economy_categories,
 															   user_input['Savings'])
 
 
@@ -112,13 +122,16 @@ if __name__ == '__main__':
 
 	
 	# anual
-	visualization.plot_kpis(metrics, "Anual", col2, user_data)
+	visualization.plot_kpis(metrics, "Anual", col2, og_df, user_input['Income'])
 
 	# monthly
-	visualization.plot_kpis(monthly_metrics, "Mensal", col2, user_data)
+	visualization.plot_kpis(monthly_metrics, "Mensal", col2, og_df, user_input['Income'])
 
 
 	visualization.plot_paid_monthly_expensives(visualize_df, col2, user_input['Expenses'])
+
+
+	visualization.expenses_to_come(visualize_df, col2, user_input['Savings'])
 
  
 	with st.sidebar.expander("Qual é o limite de gasto para cada categoria?"):

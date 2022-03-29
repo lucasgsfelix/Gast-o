@@ -1,21 +1,25 @@
 import datetime
+import pandas as pd
 import streamlit as st
 
 
-def plot_kpis(metrics, header, column, user_data):
-
-	mult = 1
+def plot_kpis(metrics, header, column, og_df, income_columns):
 
 	if header.lower() == 'anual':
 
-		current_date = datetime.datetime.now()
+		income = og_df[og_df['Categoria'].isin(income_columns)]['Quantia'].sum()
 
-		mult = current_date.month
+	else:
+
+		current_month = datetime.datetime.now().month
+
+		income = og_df[(og_df['Categoria'].isin(income_columns)) &
+						(og_df['Mês'] == current_month)]['Quantia'].sum()
 
 
 	column.header(header + ':')
 
-	column.metric('Salário ', str(user_data['Income'] * mult))
+	column.metric('Salário ', str(income))
 
 	column.metric("Gasto:", "R$ " + str(metrics['Current Expenses']), "R$ " + str(metrics['Last Expenses']))
 
@@ -39,7 +43,7 @@ def plot_paid_monthly_expensives(user_data, column, expenses):
 
 		current_month = datetime.datetime.now().month
 
-		column.header("Contas pagas no mês " + str(current_month))
+		column.header("Contas pagas no mês " + str(current_month) + ":")
 
 		monthly_data = user_data[user_data['Mês'] == current_month]
 
@@ -59,3 +63,38 @@ def plot_paid_monthly_expensives(user_data, column, expenses):
 			if expense.lower() in paid_expenses:
 
 				column.markdown('### :white_check_mark: ' + expense.title())
+
+
+
+def expenses_to_come(user_data, column, savings_categories):
+
+	# define the expenses that will come
+
+	user_data['Data Datetime'] = pd.to_datetime(user_data['Data'], format='%d/%m/%Y')
+
+	future_expenses = user_data[(user_data['Data Datetime'] >= datetime.datetime.now()) &
+								~(user_data['Categoria'].isin(savings_categories))]
+
+	column.header("Contas agendadas: ")
+
+	index = 0
+
+	for expense, date, value in future_expenses[['Descrição', 'Data', 'Quantia']].values:
+
+		column.markdown('### :large_blue_circle: ' + ' - '.join([expense.title(), str(date), "R$" + str(value)]))
+
+		index += 1
+
+
+		if index > 5:
+
+			break
+
+	if index > 5:
+
+		column.markdown("### :red_circle: Existem outras despesas futuras que não foram apresentadas!")
+
+
+
+
+
