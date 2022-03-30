@@ -229,3 +229,64 @@ def measure_kpis(og_df, df, income_columns, savings_columns):
 
 
 	return metrics, monthly_metrics
+
+
+def verify_sheet_columns(user_sheet):
+
+	users_columns = user_sheet.columns
+
+	original_columns = ['Categoria', 'Data', 'Descrição', 'Dividido',
+						'Modalidade (Cŕedito/Pix/Débito/Boleto)', 'Quantia']
+
+	intersec = np.intersect1d(original_columns, users_columns).sort()
+
+	if income_columns == original_columns:
+
+		return True, user_sheet[original_columns], original_columns
+
+	else:
+
+		return False, user_sheet, original_columns
+
+
+def treat_nan_values(user_sheet):
+
+	user_sheet['Dividido'] = user_sheet['Dividido'].fillna(1)
+	user_sheet['Descrição'] = user_sheet['Descrição'].fillna('')
+
+	mode_column = 'Modalidade (Cŕedito/Pix/Débito/Boleto)'
+	user_sheet[mode_column] = user_sheet[mode_column].fillna('')
+
+	user_sheet = user_sheet.dropna(subset=['Categoria', 'Data'])
+
+	return user_sheet
+
+
+def verify_sheet_dtypes(user_sheet):
+
+
+	dtypes = {
+				'Categoria': str,
+			  	'Data': str,
+			  	'Descrição': str,
+			  	'Dividido': int,
+				'Modalidade (Cŕedito/Pix/Débito/Boleto)': str,
+				'Quantia': float
+			}
+
+	error = False
+
+	for column, column_type in dtypes.items():
+
+		try:
+
+			user_sheet[column] = user_sheet[column].astype(column_type)
+
+		except TypeError:
+
+			error = True
+
+			break
+
+	return user_sheet, error
+
