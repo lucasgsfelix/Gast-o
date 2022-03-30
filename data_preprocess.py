@@ -102,6 +102,20 @@ def read_data(user_info, link):
 
 
 @st.cache(allow_output_mutation=True, show_spinner=False)
+def data_treatment(user_sheet):
+
+	user_sheet['Data'] = pd.to_datetime(user_sheet['Data'], format='%d/%m/%Y')
+
+	user_sheet = define_credit_card_expenses(user_sheet)
+
+	user_sheet['Mês'] = user_sheet['Data'].dt.month
+
+	user_sheet['Dividido'] = user_sheet['Dividido'].astype(int)
+
+	return user_sheet
+
+
+@st.cache(allow_output_mutation=True, show_spinner=False)
 def define_user_data():
 
 	user_data = {"User Name": "Lucas Félix", "User ID": 0, "Income": 0, "Last Income": 0,
@@ -238,9 +252,11 @@ def verify_sheet_columns(user_sheet):
 	original_columns = ['Categoria', 'Data', 'Descrição', 'Dividido',
 						'Modalidade (Cŕedito/Pix/Débito/Boleto)', 'Quantia']
 
-	intersec = np.intersect1d(original_columns, users_columns).sort()
+	intersec = np.intersect1d(original_columns, users_columns)
 
-	if income_columns == original_columns:
+	intersec.sort()
+
+	if list(intersec) == original_columns:
 
 		return True, user_sheet[original_columns], original_columns
 
@@ -276,9 +292,11 @@ def verify_sheet_dtypes(user_sheet):
 				'Quantia': float
 			}
 
-	error = False
+	no_error = True
 
 	for column, column_type in dtypes.items():
+
+		user_sheet[column].astype(column_type)
 
 		try:
 
@@ -286,20 +304,20 @@ def verify_sheet_dtypes(user_sheet):
 
 		except TypeError:
 
-			error = True
+			no_error = False
 
 			break
 
-	return user_sheet, error
+	return user_sheet, no_error
 
 
 
-def identify_familiar_categories(user_inputs, specifc_categories, unique_descriptions, key):
+def identify_familiar_categories(user_inputs, specifc_categories, unique_descriptions, unique_categories, key):
 
-	user_inputs[key] = np.intersect1d(specifc_categories[key], unique_descriptions)
-	user_inputs[key] = set(user_inputs[key] + np.intersect1d(specifc_categories[key], unique_categories))
+	user_inputs[key] = list(np.intersect1d(specifc_categories[key], unique_descriptions))
+	user_inputs[key] = list(set(user_inputs[key] + list(np.intersect1d(specifc_categories[key], unique_categories))))
 
-	return user_inputs
+	return user_inputs, len(user_inputs[key])
 
 
 def retrieve_categories(user_sheet):
@@ -317,8 +335,16 @@ def retrieve_categories(user_sheet):
 
 	user_inputs = {}
 
+	identified = False
+
 	for key in ['Expenses', 'Savings', 'Income']:
 
-		user_inputs = identify_familiar_categories(user_inputs, specifc_categories, unique_descriptions, key)
+		user_inputs, amount_categories = identify_familiar_categories(user_inputs, specifc_categories,
+												   					  unique_descriptions, unique_categories, key)
 
-	return user_inputs
+		if amount_categories > 0:
+
+			identified = True
+
+
+	return user_inputs, identified

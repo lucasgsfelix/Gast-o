@@ -13,6 +13,7 @@ import numpy as np
 import data_preprocess
 import design
 import visualization
+import user_initial_page
 
 import streamlit as st
 import streamlit_authenticator as stauth
@@ -23,24 +24,20 @@ if __name__ == '__main__':
 
 	st.set_page_config(layout="wide", page_title="Gastão", page_icon="📊")
 
-	#st.markdown("# Gastão")
-
-	#st.markdown("## Seu Organizador de Gastos")
-
-	#st.markdown("### Fazer Login")
-
 	#login.login_page()
 
 	# if user_logged:
 
 		#instructions.first_steps()
 
+	# needed_input, user_sheet, valid_execution
+	user_input, og_df, valid = user_initial_page.define_user_inputs()
+
 	# else:
 
 		#input.user_input()
 
-
-	if True:
+	if valid:
 
 		# User json format:
 		# User name, User ID; Income (dict) - it can be several incomes;
@@ -49,22 +46,16 @@ if __name__ == '__main__':
 
 		design.remove_top_padding()
 
-		link = "https://docs.google.com/spreadsheets/d/1iPDOgYOE6KL6FWMaToQ5fiQw5VtxbSyhSxDBLwLqiZ4/edit?usp=sharing"
+		og_df = data_preprocess.data_treatment(og_df)
 
 		user_data = data_preprocess.define_user_data()
 
-		og_df = data_preprocess.read_data(user_data, link)
+		#	og_df = data_preprocess.read_data(user_data, user_input['link'])
 
-
-
-		# we will ask the user to input this data
-		user_input = {}
 		user_input['Plot Start Date'] = og_df['Data'].min()
 		user_input['Plot End Date'] = og_df['Data'].max()
 		user_input['Categories'] = og_df['Categoria'].unique()
-		user_input['Expenses'] = ['Luz', 'Aluguel', 'Internet', 'Condomínio', 'Celular']
-		user_input['Savings'] = ['Poupança']
-		user_input['Income'] = ['Salário']
+
 
 		user_input['Categories'] = list(filter(lambda category: (category not in user_input['Savings']) and
 																(category not in user_input['Income']), user_input['Categories']))
