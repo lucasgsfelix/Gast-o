@@ -56,10 +56,6 @@ if __name__ == '__main__':
 		og_df = data_preprocess.read_data(user_data, link)
 
 
-		og_df = og_df.dropna(subset=['Data', 'Quantia'])
-
-		og_df['Categoria'] = og_df['Categoria'].fillna('Outros - Adicionado Automaticamente')
-
 
 		# we will ask the user to input this data
 		user_input = {}

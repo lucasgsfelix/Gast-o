@@ -257,7 +257,9 @@ def treat_nan_values(user_sheet):
 	mode_column = 'Modalidade (Cŕedito/Pix/Débito/Boleto)'
 	user_sheet[mode_column] = user_sheet[mode_column].fillna('')
 
-	user_sheet = user_sheet.dropna(subset=['Categoria', 'Data'])
+	user_sheet['Categoria'] = user_sheet['Categoria'].fillna('Outros - Adicionado Automaticamente')
+
+	user_sheet = user_sheet.dropna(subset=['Categoria', 'Data', 'Quantia'])
 
 	return user_sheet
 
@@ -290,3 +292,33 @@ def verify_sheet_dtypes(user_sheet):
 
 	return user_sheet, error
 
+
+
+def identify_familiar_categories(user_inputs, specifc_categories, unique_descriptions, key):
+
+	user_inputs[key] = np.intersect1d(specifc_categories[key], unique_descriptions)
+	user_inputs[key] = set(user_inputs[key] + np.intersect1d(specifc_categories[key], unique_categories))
+
+	return user_inputs
+
+
+def retrieve_categories(user_sheet):
+
+	specifc_categories = {}
+
+	specifc_categories['Expenses'] = ['Luz', 'Aluguel', 'Internet', 'Condomínio', 'Celular']
+	specifc_categories['Savings'] = ['Poupança', 'Investimento', 'Investimentos']
+	specifc_categories['Income'] = ['Salário']
+
+
+	unique_descriptions = user_sheet['Descrição'].unique()
+
+	unique_categories = user_sheet['Categoria'].unique()
+
+	user_inputs = {}
+
+	for key in ['Expenses', 'Savings', 'Income']:
+
+		user_inputs = identify_familiar_categories(user_inputs, specifc_categories, unique_descriptions, key)
+
+	return user_inputs
