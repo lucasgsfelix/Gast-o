@@ -2,35 +2,28 @@ import datetime
 import pandas as pd
 import streamlit as st
 
+import data_preprocess
+
 
 def plot_kpis(metrics, header, column, og_df, income_columns):
 
-	if header.lower() == 'anual':
 
-		income = og_df[og_df['Categoria'].isin(income_columns)]['Quantia'].sum()
-
-	else:
-
-		current_month = datetime.datetime.now().month
-
-		income = og_df[(og_df['Categoria'].isin(income_columns)) &
-						(og_df['Mês'] == current_month)]['Quantia'].sum()
-
+	income = data_preprocess.measure_income(og_df, income_columns, header)
 
 	column.header(header + ':')
 
-	column.metric('Salário ', str(income))
+	column.metric('Salário ', str(income.round(2)))
 
 	column.metric("Gasto:", "R$ " + str(metrics['Current Expenses']), "R$ " + str(metrics['Last Expenses']))
 
 	if metrics['Percentage Expend'] < 100:
 
 		# the delta will be compared to the last month
-		column.metric("Economizado:",  "R$ " + str((metrics['Diff'])), str(metrics['Percentage Expend'].round(2)) + '%')
+		column.metric("Economizado:",  "R$ " + str(round(metrics['Diff'], 2)), str(metrics['Percentage Expend'].round(2)) + '%')
 
 	else:
 
-		column.metric("Gasto a mais:", "R$ " + str(metrics['Diff']), str(metrics['Percentage Expend'].round(2)) + '%')
+		column.metric("Gasto a mais:", "R$ " + str(round(metrics['Diff'], 2)), str(metrics['Percentage Expend'].round(2)) + '%')
 
 	column.metric("Poupança & Investimentos: ", "R$ " + str(metrics['Current Savings']), "R$ " + str(metrics['Last Savings']))
 

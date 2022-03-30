@@ -18,8 +18,6 @@ def verify_surpassed_limit(value):
 
 def download_google_drive_sheet(link):
 
-	link = "https://docs.google.com/spreadsheets/d/1iPDOgYOE6KL6FWMaToQ5fiQw5VtxbSyhSxDBLwLqiZ4/edit?usp=sharing"
-
 	sheet_id = link.split('/')[-2]
 
 	sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_id + "/edit#gid=0"
@@ -83,20 +81,22 @@ def define_credit_card_expenses(user_sheet):
 	# removing that total expense em dividing it in minor expenses
 	user_sheet = user_sheet[user_sheet[mode_columns] != 'Crédito']
 
-	return user_sheet.append(credit_expenses).reset_index()
+	return user_sheet.append(credit_expenses).reset_index(drop=True)
 
 
 
 @st.cache(allow_output_mutation=True, show_spinner=False)
-def read_data(user_info, link=None):
+def read_data(user_info, link):
 
 	user_sheet = download_google_drive_sheet(link)
 
 	user_sheet['Data'] = pd.to_datetime(user_sheet['Data'], format='%d/%m/%Y')
 
+	user_sheet = define_credit_card_expenses(user_sheet)
+
 	user_sheet['Mês'] = user_sheet['Data'].dt.month
 
-	user_sheet = define_credit_card_expenses(user_sheet)
+	user_sheet['Dividido'] = user_sheet['Dividido'].astype(int)
 
 	return user_sheet
 
@@ -127,7 +127,7 @@ def define_limits_table(df, user_info):
 	category_sum = df.groupby('Categoria').sum()
 
 	category_summary = category_mean.join(category_std, lsuffix=' std.')
-	category_summary = category_summary.join(category_sum, lsuffix=' sum').reset_index()
+	category_summary = category_summary.join(category_sum, lsuffix=' sum').reset_index(drop=True)
 
 	user_budget = pd.DataFrame(user_info["Budget Categories"].items(), columns=['Categoria', 'Limite'])
 
@@ -143,10 +143,10 @@ def define_limits_table(df, user_info):
 
 	limits_df.reset_index(inplace=True)
 
-	return limits_df
+	return limits_df.drop(columns=['index'], axis=1, errors='ignore')
 
 
-def mesuare_filtered_quanty(df, query, expenses=True, savings_categories=['Poupança', 'Investimentos']):
+def measure_filtered_quanty(df, query, expenses, savings_categories):
 	"""
 		If expenses, then do not consider the savings categories
 		Else, only consider savings coluns
@@ -164,7 +164,23 @@ def mesuare_filtered_quanty(df, query, expenses=True, savings_categories=['Poupa
 	return filtered_df['Quantia'].sum().round(2)
 
 
-def measure_kpis(df):
+def measure_income(og_df, income_columns, header):
+
+	if header.lower() == 'anual':
+
+		income = og_df[og_df['Categoria'].isin(income_columns)]['Quantia'].sum()
+
+	else:
+
+		current_month = datetime.datetime.now().month
+
+		income = og_df[(og_df['Categoria'].isin(income_columns)) &
+						(og_df['Mês'] == current_month)]['Quantia'].sum()
+
+	return round(income, 2)
+
+
+def measure_kpis(og_df, df, income_columns, savings_columns):
 
 	current_date = datetime.datetime.now()
 
@@ -177,28 +193,39 @@ def measure_kpis(df):
 	df = df[df[mode_columns] != 'Crédito']
 
 
-
 	metrics = {
-			    "Current Expenses": mesuare_filtered_quanty(df, (df['Data'].dt.year == current_date.year), True),
-				"Current Savings": mesuare_filtered_quanty(df, (df['Data'].dt.year == current_date.year), False),
-				"Last Expenses": mesuare_filtered_quanty(df, (df['Data'].dt.year == last_date.year - 1), True),
-				"Last Savings": mesuare_filtered_quanty(df, (df['Data'].dt.year == last_date.year - 1), False),
+			    "Current Expenses": measure_filtered_quanty(df, (df['Data'].dt.year == current_date.year), True, savings_columns),
+				"Current Savings": measure_filtered_quanty(og_df, (og_df['Data'].dt.year == current_date.year), False, savings_columns),
+				"Last Expenses": measure_filtered_quanty(df, (df['Data'].dt.year == last_date.year - 1), True, savings_columns),
+				"Last Savings": measure_filtered_quanty(og_df, (og_df['Data'].dt.year == last_date.year - 1), False, savings_columns),
 				"Total Saved": 0
 			  }
 
 
+	income = df[df['Categoria'].isin(income_columns)]['Quantia'].sum()
+
 	metrics['Percentage Expend'] = (metrics['Current Expenses']/metrics['Last Expenses']) * 100
-	metrics['Diff'] = np.abs(metrics['Current Expenses'] - metrics['Last Expenses']).round(2)
+
+	income = measure_income(og_df, income_columns, 'anual')
+
+	metrics['Diff'] = (income - metrics['Current Expenses'] - metrics["Current Savings"]).round(2)
+
 
 	monthly_metrics = {
-					    "Current Expenses": mesuare_filtered_quanty(df, (df['Data'].dt.month == current_date.month) & (df['Data'].dt.year == current_date.year), True),
-						"Current Savings": mesuare_filtered_quanty(df, (df['Data'].dt.month == current_date.month) & (df['Data'].dt.year == current_date.year), False),
-						"Last Expenses": mesuare_filtered_quanty(df, (df['Data'].dt.month == last_date.month) & (df['Data'].dt.year == last_date.year), True),
-						"Last Savings": mesuare_filtered_quanty(df, (df['Data'].dt.month == last_date.month) & (df['Data'].dt.year == last_date.year), False)
+					    "Current Expenses": measure_filtered_quanty(df, (df['Data'].dt.month == current_date.month) &
+					    												(df['Data'].dt.year == current_date.year), True, savings_columns),
+						"Current Savings": measure_filtered_quanty(og_df, (og_df['Data'].dt.month == current_date.month) &
+																	   (og_df['Data'].dt.year == current_date.year), False, savings_columns),
+						"Last Expenses": measure_filtered_quanty(df, (df['Data'].dt.month == last_date.month) &
+																(df['Data'].dt.year == last_date.year), True, savings_columns),
+						"Last Savings": measure_filtered_quanty(og_df, (og_df['Data'].dt.month == last_date.month) &
+																	   (og_df['Data'].dt.year == last_date.year), False, savings_columns)
 					  }
 
+	income = measure_income(og_df, income_columns, 'mensal')
+
 	monthly_metrics['Percentage Expend'] = (monthly_metrics['Current Expenses']/monthly_metrics['Last Expenses']) * 100
-	monthly_metrics['Diff'] = np.abs(monthly_metrics['Current Expenses'] - monthly_metrics['Last Expenses']).round(2)
+	monthly_metrics['Diff'] = (income - monthly_metrics['Current Expenses'] - monthly_metrics["Current Savings"]).round(2)
 
 
 	return metrics, monthly_metrics
