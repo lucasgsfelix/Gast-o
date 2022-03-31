@@ -3,6 +3,7 @@
 	Page focused on getting the data needed for the users
 
 """
+import re
 
 import streamlit as st
 import validators
@@ -66,7 +67,7 @@ def treat_input_sheet(needed_input, col):
 	return valid_execution, user_sheet
 
 
-def define_user_inputs(user_name='', needed_input={}):
+def define_user_inputs(needed_input={}):
 	"""
 
 		Inputs needed from the user:
@@ -83,81 +84,105 @@ def define_user_inputs(user_name='', needed_input={}):
 
 	_, col, _ = st.columns((70, 70, 70))
 
-	user_sheet = None
+	user_sheet, go_to_graphs, valid_execution = None, False, False
 
 
-	col.markdown("# Olá " + user_name + " seja bem-vindo ao Gastão!")
+	col.markdown("# Olá, seja bem-vindo ao Gastão!")
 
-	col.markdown("## Precisamos de algumas informações suas para podermos prosseguir!")
+	needed_input['email'] = col.text_input("Digite seu e-mail:", " ")
 
-	needed_input['link'] = col.text_input("Coloque aqui o link da sua planilha no GoogleSheets!", "")
+	needed_input['valid e-mail'] = False
 
-	col.info("Não se esqueça que a sua planilha deve ser pública para podermos acessar!")
+	if bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", needed_input['email'])):
 
-	valid_execution = False
-
-	if needed_input['link'] != '':
-
-		valid_execution, user_sheet = treat_input_sheet(needed_input, col)
-
-	go_to_graphs = False
-
-	if valid_execution:
-
-		valid_execution = False
-
-		### all the data is valid
-		familiar_categories, identified = data_preprocess.retrieve_categories(user_sheet)
+		needed_input['valid e-mail'] = True
 
 
-		if identified:
+	else:
 
-			col.success("Foram identificadas algumas categorias!")
+		if needed_input['email'] != ' ':
 
-		categories = user_sheet['Categoria'].unique()
-
-		expenses_categories = user_sheet['Descrição'].unique().tolist() + familiar_categories['Expenses']
-		col.write("<b><center>Quais são os seus gastos mensais? (Aqueles que se repetem)</center></b>", unsafe_allow_html=True)
-		needed_input['Expenses'] = col.multiselect("", expenses_categories, familiar_categories['Expenses'])
+			col.error("E-mail inválido. Por favor, digite um e-mail válido para prosseguirmos.")
 
 
-		economy_categories = user_sheet['Categoria'].unique().tolist() + familiar_categories['Savings']
-		col.write("<b><center>Quais são suas categorias de economia?</center></b>", unsafe_allow_html=True)
-		needed_input['Savings'] = col.multiselect('', economy_categories, familiar_categories['Savings'])
+	if 'valid e-mail' in needed_input.keys() and needed_input['valid e-mail']:
 
-		income_categories = user_sheet['Categoria'].unique().tolist() + familiar_categories['Income']
-		col.write("<b><center>Quais são suas categorias de fonte de renda? (Salário)</center></b>", unsafe_allow_html=True)
-		needed_input['Income'] = col.multiselect("", income_categories, familiar_categories['Income'])
+		if needed_input['email'] in []:
 
+			# needed_input, user_sheet, go_to_graphs
+			return retrieve_user_data(needed_input['email'])
 
-		with col.form(key='categories'):
+		else:
 
-			info = {}
+			col.markdown("## Precisamos de algumas informações suas para podermos prosseguir!")
 
-			col.write("<b><center>Qual é o seu limite de gasto mensal para cada categoria?</center></b>", unsafe_allow_html=True)
+			needed_input['link'] = col.text_input("Coloque aqui o link da sua planilha no GoogleSheets!", "")
 
-			info['Categoria'] = col.selectbox("Categoria", categories)
-			info['Limite'] = col.number_input("Limite de Gasto", min_value=0, value=500)
-
-			if col.button(label="Salvar limite de gasto!"):
-
-				if 'Budget Categories' in needed_input.keys():
-
-					needed_input['Budget Categories'] = {**needed_input['Budget Categories'], info['Categoria']: info['Limite']}
-
-					# in this case there is already a budget for some categories
-
-				else:
-
-					needed_input['Budget Categories'] = {info['Categoria']: info['Limite']}
+			col.info("Não se esqueça que a sua planilha deve ser pública para podermos acessar!")
 
 
-				budgets = [category + " " + str(budget)  for category, budget in needed_input['Budget Categories'].items()]
+			if needed_input['link'] != '':
 
-				col.code(', '.join(budgets))
+				valid_execution, user_sheet = treat_input_sheet(needed_input, col)
+
+			go_to_graphs = False
+
+			if valid_execution:
+
+				valid_execution = False
+
+				### all the data is valid
+				familiar_categories, identified = data_preprocess.retrieve_categories(user_sheet)
 
 
-		go_to_graphs = col.button("Enviar informações!")
+				if identified:
+
+					col.success("Foram identificadas algumas categorias!")
+
+				categories = user_sheet['Categoria'].unique()
+
+				expenses_categories = user_sheet['Descrição'].unique().tolist() + familiar_categories['Expenses']
+				col.write("<b><center>Quais são os seus gastos mensais? (Aqueles que se repetem)</center></b>", unsafe_allow_html=True)
+				needed_input['Expenses'] = col.multiselect("", expenses_categories, familiar_categories['Expenses'])
+
+
+				economy_categories = user_sheet['Categoria'].unique().tolist() + familiar_categories['Savings']
+				col.write("<b><center>Quais são suas categorias de economia?</center></b>", unsafe_allow_html=True)
+				needed_input['Savings'] = col.multiselect('', economy_categories, familiar_categories['Savings'])
+
+				income_categories = user_sheet['Categoria'].unique().tolist() + familiar_categories['Income']
+				col.write("<b><center>Quais são suas categorias de fonte de renda? (Salário)</center></b>", unsafe_allow_html=True)
+				needed_input['Income'] = col.multiselect("", income_categories, familiar_categories['Income'])
+
+
+				with col.form(key='categories'):
+
+					info = {}
+
+					col.write("<b><center>Qual é o seu limite de gasto mensal para cada categoria?</center></b>", unsafe_allow_html=True)
+
+					info['Categoria'] = col.selectbox("Categoria", categories)
+					info['Limite'] = col.number_input("Limite de Gasto", min_value=0, value=500)
+
+					if col.button(label="Salvar limite de gasto!"):
+
+						if 'Budget Categories' in needed_input.keys():
+
+							needed_input['Budget Categories'] = {**needed_input['Budget Categories'], info['Categoria']: info['Limite']}
+
+							# in this case there is already a budget for some categories
+
+						else:
+
+							needed_input['Budget Categories'] = {info['Categoria']: info['Limite']}
+
+
+						budgets = [category + " " + str(budget)  for category, budget in needed_input['Budget Categories'].items()]
+
+						col.code(', '.join(budgets))
+
+
+				go_to_graphs = col.button("Enviar informações!")
 
 
 	return needed_input, user_sheet, go_to_graphs

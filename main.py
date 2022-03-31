@@ -16,12 +16,11 @@ import visualization
 import user_initial_page
 
 import streamlit as st
-import streamlit_authenticator as stauth
 import plotly.express as px
 
 
 @st.cache(allow_output_mutation=True, show_spinner=False)
-def define_cache_variabbles():
+def define_cache_variables():
 
 
 	variables = {'valid': False, 'needed_input': {}}
@@ -29,7 +28,7 @@ def define_cache_variabbles():
 	return variables
 
 
-def cache_variables(variables, key, new_variable):
+def insert_cache_variables(variables, key, new_variable):
 
 	variables[key] = new_variable
 
@@ -41,7 +40,7 @@ if __name__ == '__main__':
 
 	#login.login_page()
 
-	variables = define_cache_variabbles()
+	variables = define_cache_variables()
 
 	if not variables['valid']:
 
@@ -49,8 +48,8 @@ if __name__ == '__main__':
 
 		if variables['valid']:
 		
-			variables = cache_variables(variables, "og_df", og_df)
-			variables = cache_variables(variables, "user_input", user_input)
+			variables = insert_cache_variables(variables, "og_df", og_df)
+			variables = insert_cache_variables(variables, "user_input", user_input)
 
 
 	else:
