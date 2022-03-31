@@ -18,6 +18,20 @@ import user_initial_page
 import streamlit as st
 import plotly.express as px
 
+import pymongo
+
+
+@st.experimental_singleton
+def init_connection():
+
+    client =  pymongo.MongoClient(**st.secrets["mongo"])
+
+    db = client['gastao']
+
+    collection = db['gastao']
+
+    return collection
+
 
 @st.cache(allow_output_mutation=True, show_spinner=False)
 def define_cache_variables():
@@ -34,11 +48,14 @@ def insert_cache_variables(variables, key, new_variable):
 
 	return variables
 
+
 if __name__ == '__main__':
 
 	st.set_page_config(layout="wide", page_title="Gastão", page_icon="📊")
 
 	#login.login_page()
+
+	collection = init_connection()
 
 	variables = define_cache_variables()
 
@@ -103,6 +120,17 @@ if __name__ == '__main__':
 		visualize_df = visualize_df[(visualize_df['Data'].dt.date >= user_input['Plot Start Date']) &
 									(visualize_df['Data'].dt.date <= user_input['Plot End Date'])]
 
+        needed_input['new link'] = col.text_input("Avaliar outra planilha do GoogleSheets!", needed_input['link'])
+
+        needed_input['Link Change'] = False
+
+        if needed_input['new link'] != needed_input['link']:
+
+            # updating the link
+            needed_input['link'] = needed_input['new link']
+
+            needed_input['Link Change'] = True
+
 
 		expenses_categories = visualize_df['Descrição'].unique().tolist() + user_input['Expenses']
 		user_input['Expenses'] = st.sidebar.multiselect("Quais são os seus gastos mensais?", expenses_categories,
@@ -117,8 +145,7 @@ if __name__ == '__main__':
 
 		metrics, monthly_metrics = data_preprocess.measure_kpis(og_df, visualize_df, user_input['Income'], user_input['Savings'])
 
-
-		## What are your monthly costs? Luz, aluguel, internet, condomínio, celular
+        # HERE: I have to add a update table button
 
 
 		# main indicators
@@ -180,4 +207,7 @@ if __name__ == '__main__':
 
 		col1.dataframe(limits_table.drop(['Dividido', 'Mês', 'Ultrapassou', 'Color'], axis=1).style.highlight_max(axis=1), width=1000)
 
+        if user_data['Link Changed']:
+
+            collection.insert_one(user_data)
 
