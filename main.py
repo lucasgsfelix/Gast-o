@@ -20,24 +20,40 @@ import streamlit_authenticator as stauth
 import plotly.express as px
 
 
+@st.cache(allow_output_mutation=True, show_spinner=False)
+def define_cache_variabbles():
+
+
+	variables = {'valid': False, 'needed_input': {}}
+
+	return variables
+
+
+def cache_variables(variables, key, new_variable):
+
+	variables[key] = new_variable
+
+	return variables
+
 if __name__ == '__main__':
 
 	st.set_page_config(layout="wide", page_title="Gastão", page_icon="📊")
 
 	#login.login_page()
 
-	# if user_logged:
+	variables = define_cache_variabbles()
 
-		#instructions.first_steps()
+	if not variables['valid']:
 
-	# needed_input, user_sheet, valid_execution
-	user_input, og_df, valid = user_initial_page.define_user_inputs()
+		user_input, og_df, variables['valid'] = user_initial_page.define_user_inputs(needed_input=variables['needed_input'])
 
-	# else:
+		if variables['valid']:
+		
+			variables = cache_variables(variables, "og_df", og_df)
+			variables = cache_variables(variables, "user_input", user_input)
 
-		#input.user_input()
 
-	if valid:
+	else:
 
 		# User json format:
 		# User name, User ID; Income (dict) - it can be several incomes;
@@ -45,6 +61,9 @@ if __name__ == '__main__':
 		# Spreed Sheet: link
 
 		design.remove_top_padding()
+
+		og_df = variables['og_df']
+		user_input = variables['user_input']
 
 		og_df = data_preprocess.data_treatment(og_df)
 
@@ -148,8 +167,6 @@ if __name__ == '__main__':
 
 				info = {}
 
-				start_time, end_time = st.columns(2)
-
 				info['Categoria'] = st.selectbox("Categoria", user_input['Categories'])
 				info['Limite'] = st.number_input("Limite de Gasto", min_value=0, value=500)
 
@@ -163,4 +180,5 @@ if __name__ == '__main__':
 		limits_table = data_preprocess.define_limits_table(visualize_df, user_data)
 
 		col1.dataframe(limits_table.drop(['Dividido', 'Mês', 'Ultrapassou', 'Color'], axis=1).style.highlight_max(axis=1), width=1000)
+
 

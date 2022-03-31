@@ -66,7 +66,7 @@ def treat_input_sheet(needed_input, col):
 	return valid_execution, user_sheet
 
 
-def define_user_inputs(user_name=''):
+def define_user_inputs(user_name='', needed_input={}):
 	"""
 
 		Inputs needed from the user:
@@ -80,9 +80,6 @@ def define_user_inputs(user_name=''):
 		Income
 
 	"""
-
-
-	needed_input = {}
 
 	_, col, _ = st.columns((70, 70, 70))
 
@@ -103,6 +100,7 @@ def define_user_inputs(user_name=''):
 
 		valid_execution, user_sheet = treat_input_sheet(needed_input, col)
 
+	go_to_graphs = False
 
 	if valid_execution:
 
@@ -119,21 +117,48 @@ def define_user_inputs(user_name=''):
 		categories = user_sheet['Categoria'].unique()
 
 		expenses_categories = user_sheet['Descrição'].unique().tolist() + familiar_categories['Expenses']
-		needed_input['Expenses'] = col.multiselect("Quais são os seus gastos mensais? (Aqueles que se repetem)", expenses_categories,
-																   							 familiar_categories['Expenses'])
+		col.write("<b><center>Quais são os seus gastos mensais? (Aqueles que se repetem)</center></b>", unsafe_allow_html=True)
+		needed_input['Expenses'] = col.multiselect("", expenses_categories, familiar_categories['Expenses'])
 
 
 		economy_categories = user_sheet['Categoria'].unique().tolist() + familiar_categories['Savings']
-		needed_input['Savings'] = col.multiselect("Quais são suas categorias de economia?", economy_categories,
-																   familiar_categories['Savings'])
+		col.write("<b><center>Quais são suas categorias de economia?</center></b>", unsafe_allow_html=True)
+		needed_input['Savings'] = col.multiselect('', economy_categories, familiar_categories['Savings'])
 
 		income_categories = user_sheet['Categoria'].unique().tolist() + familiar_categories['Income']
-		needed_input['Income'] = col.multiselect("Quais são suas categorias de fonte de renda? (Salário)", income_categories,
-																   								familiar_categories['Income'])
+		col.write("<b><center>Quais são suas categorias de fonte de renda? (Salário)</center></b>", unsafe_allow_html=True)
+		needed_input['Income'] = col.multiselect("", income_categories, familiar_categories['Income'])
 
 
-		valid_execution = col.button("Enviar informações!")
+		with col.form(key='categories'):
+
+			info = {}
+
+			col.write("<b><center>Qual é o seu limite de gasto mensal para cada categoria?</center></b>", unsafe_allow_html=True)
+
+			info['Categoria'] = col.selectbox("Categoria", categories)
+			info['Limite'] = col.number_input("Limite de Gasto", min_value=0, value=500)
+
+			if col.button(label="Salvar limite de gasto!"):
+
+				if 'Budget Categories' in needed_input.keys():
+
+					needed_input['Budget Categories'] = {**needed_input['Budget Categories'], info['Categoria']: info['Limite']}
+
+					# in this case there is already a budget for some categories
+
+				else:
+
+					needed_input['Budget Categories'] = {info['Categoria']: info['Limite']}
 
 
-	return needed_input, user_sheet, valid_execution
+				budgets = [category + " " + str(budget)  for category, budget in needed_input['Budget Categories'].items()]
+
+				col.code(', '.join(budgets))
+
+
+		go_to_graphs = col.button("Enviar informações!")
+
+
+	return needed_input, user_sheet, go_to_graphs
 
