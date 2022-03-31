@@ -67,7 +67,7 @@ def treat_input_sheet(needed_input, col):
 	return valid_execution, user_sheet
 
 
-def define_user_inputs(needed_input, collection):
+def define_user_inputs(needed_input, collection=None):
 	"""
 
 		Inputs needed from the user:
@@ -93,8 +93,6 @@ def define_user_inputs(needed_input, collection):
 
 	needed_input['valid e-mail'] = False
 
-	print(needed_input['email'])
-
 	if bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", needed_input['email'])):
 
 		needed_input['valid e-mail'] = True
@@ -107,9 +105,14 @@ def define_user_inputs(needed_input, collection):
 			col.error("E-mail inválido. Por favor, digite um e-mail válido para prosseguirmos.")
 
 
-	if 'valid e-mail' in needed_input.keys() and needed_input['valid e-mail']:
+
+	if 'valid e-mail' in needed_input.keys() and needed_input['valid e-mail'] and collection is not None:
 
 		queried_data = collection.find({'email': needed_input['email']})
+
+		queried_data = [data for data in queried_data]
+
+		history_error = False
 
 		if len(queried_data) > 0:
 
@@ -119,11 +122,9 @@ def define_user_inputs(needed_input, collection):
 
 			valid_execution, user_sheet = treat_input_sheet(needed_input, col)
 
-			history_error = False
-
 			if valid_execution:
 
-				return queried_data[0], user_sheet, True
+				return queried_data[0], user_sheet, True, False
 
 			else:
 
@@ -210,5 +211,5 @@ def define_user_inputs(needed_input, collection):
 				go_to_graphs = col.button("Enviar informações!")
 
 
-	return needed_input, user_sheet, go_to_graphs
+	return needed_input, user_sheet, go_to_graphs, True
 

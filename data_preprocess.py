@@ -117,6 +117,15 @@ def data_treatment(user_sheet):
 
 def verify_change(user_input, key, new_key):
 
+	if key not in user_input.keys():
+
+		user_input[key] = user_input[new_key]
+
+		user_input['Change'] = True
+
+		return user_input
+
+
 
 	if user_input[key] == user_input[new_key] and user_input['Change'] is False:
 
@@ -367,3 +376,4 @@ def retrieve_categories(user_sheet):
 
 
 	return user_inputs, identified
+

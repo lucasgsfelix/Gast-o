@@ -36,7 +36,8 @@ def init_connection():
 def define_cache_variables():
 
 
-	variables = {'valid': False, 'needed_input': {}, 'first_connection': True}
+	variables = {'valid': False, 'needed_input': {},
+				 'established_connection': True}
 
 	return variables
 
@@ -54,22 +55,28 @@ if __name__ == '__main__':
 
 	variables = define_cache_variables()
 
-	if variables['first_connection']:
+	if variables['established_connection']:
 
-		collection = init_connection()
+		variables['collection'] = init_connection()
 
-		variables['first_connection'] = False
+		variables['established_connection'] = False
 
 	if not variables['valid']:
 
-		user_input, og_df, variables['valid'] = user_initial_page.define_user_inputs(variables['needed_input'], collection)
+
+		user_input, og_df, variables['valid'], new_user = user_initial_page.define_user_inputs(variables['needed_input'],
+																					 variables['collection'])
 
 		if variables['valid']:
 		
 			variables = insert_cache_variables(variables, "og_df", og_df)
 			variables = insert_cache_variables(variables, "user_input", user_input)
 
-			collection.insert_one(variables['user_input'])
+			collection = variables['collection']
+
+			if new_user:
+
+				collection.insert_one(variables['user_input'])
 
 
 	else:
@@ -221,7 +228,8 @@ if __name__ == '__main__':
 
 		if user_input['Change']:
 
-			collection.updateOne({"email": user_input['email']}, user_input)
+			collection = variables['collection']
+
+			collection.update_one({"email": user_input['email']}, {"$set": user_input}, True)
 
 			user_input['Change'] = False
-
