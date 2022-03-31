@@ -115,6 +115,25 @@ def data_treatment(user_sheet):
 	return user_sheet
 
 
+def verify_change(user_input, key, new_key):
+
+
+	if user_input[key] == user_input[new_key] and user_input['Change'] is False:
+
+
+		return user_input
+
+	else:
+
+		# is differente and do not had a change
+		user_input['Change'] = True
+
+		user_input[key] = user_input[new_key]
+
+
+	return user_input
+
+
 @st.cache(allow_output_mutation=True, show_spinner=False)
 def define_user_data():
 

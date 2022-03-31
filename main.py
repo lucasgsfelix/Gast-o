@@ -21,23 +21,22 @@ import plotly.express as px
 import pymongo
 
 
-@st.experimental_singleton
 def init_connection():
 
-    client =  pymongo.MongoClient(**st.secrets["mongo"])
+	client =  pymongo.MongoClient(**st.secrets["mongo"])
 
-    db = client['gastao']
+	db = client['gastao']
 
-    collection = db['gastao']
+	collection = db['gastao']
 
-    return collection
+	return collection
 
 
 @st.cache(allow_output_mutation=True, show_spinner=False)
 def define_cache_variables():
 
 
-	variables = {'valid': False, 'needed_input': {}}
+	variables = {'valid': False, 'needed_input': {}, 'first_connection': True}
 
 	return variables
 
@@ -53,20 +52,24 @@ if __name__ == '__main__':
 
 	st.set_page_config(layout="wide", page_title="Gastão", page_icon="📊")
 
-	#login.login_page()
-
-	collection = init_connection()
-
 	variables = define_cache_variables()
+
+	if variables['first_connection']:
+
+		collection = init_connection()
+
+		variables['first_connection'] = False
 
 	if not variables['valid']:
 
-		user_input, og_df, variables['valid'] = user_initial_page.define_user_inputs(needed_input=variables['needed_input'])
+		user_input, og_df, variables['valid'] = user_initial_page.define_user_inputs(variables['needed_input'], collection)
 
 		if variables['valid']:
 		
 			variables = insert_cache_variables(variables, "og_df", og_df)
 			variables = insert_cache_variables(variables, "user_input", user_input)
+
+			collection.insert_one(variables['user_input'])
 
 
 	else:
@@ -83,7 +86,7 @@ if __name__ == '__main__':
 
 		og_df = data_preprocess.data_treatment(og_df)
 
-		user_data = data_preprocess.define_user_data()
+		user_input['Change'] = False
 
 		#	og_df = data_preprocess.read_data(user_data, user_input['link'])
 
@@ -109,8 +112,10 @@ if __name__ == '__main__':
 															max_value=user_input['Plot End Date'])
 
 
-		user_input['Selected Categories'] = st.sidebar.multiselect("Quais categorias gostaria de analisar?", user_input['Categories'],
+		user_input['New Selected Categories'] = st.sidebar.multiselect("Quais categorias gostaria de analisar?", user_input['Categories'],
 																   user_input['Categories'])
+
+		user_input = data_preprocess.verify_change(user_input, 'Selected Categories', 'New Selected Categories')
 
 		# pre-process the data
 		# filtering by category
@@ -120,27 +125,24 @@ if __name__ == '__main__':
 		visualize_df = visualize_df[(visualize_df['Data'].dt.date >= user_input['Plot Start Date']) &
 									(visualize_df['Data'].dt.date <= user_input['Plot End Date'])]
 
-        needed_input['new link'] = col.text_input("Avaliar outra planilha do GoogleSheets!", needed_input['link'])
+		user_input['new link'] = st.sidebar.text_input("Avaliar outra planilha do GoogleSheets!", user_input['link'])
 
-        needed_input['Link Change'] = False
-
-        if needed_input['new link'] != needed_input['link']:
-
-            # updating the link
-            needed_input['link'] = needed_input['new link']
-
-            needed_input['Link Change'] = True
+		user_input = data_preprocess.verify_change(user_input, 'link', 'new link')
 
 
 		expenses_categories = visualize_df['Descrição'].unique().tolist() + user_input['Expenses']
-		user_input['Expenses'] = st.sidebar.multiselect("Quais são os seus gastos mensais?", expenses_categories,
+		user_input['New Expenses'] = st.sidebar.multiselect("Quais são os seus gastos mensais?", expenses_categories,
 																   user_input['Expenses'])
+
+		user_input = data_preprocess.verify_change(user_input, 'Expenses', 'New Expenses')
 
 
 		economy_categories = visualize_df['Categoria'].unique().tolist() + user_input['Savings']
 
-		user_input['Savings'] = st.sidebar.multiselect("Quais são suas categorias de economia?", economy_categories,
+		user_input['New Savings'] = st.sidebar.multiselect("Quais são suas categorias de economia?", economy_categories,
 																   user_input['Savings'])
+
+		user_input = data_preprocess.verify_change(user_input, 'Savings', 'New Savings')
 
 
 		metrics, monthly_metrics = data_preprocess.measure_kpis(og_df, visualize_df, user_input['Income'], user_input['Savings'])
@@ -198,16 +200,28 @@ if __name__ == '__main__':
 
 				st.form_submit_button()
 
-				user_data['Budget Categories'] = {**user_data['Budget Categories'], info['Categoria']: info['Limite']}
+				if 'Budget Categories' in user_input.keys():
+
+					user_input['New Budget Categories'] = {**user_input['Budget Categories'], info['Categoria']: info['Limite']}
+
+
+					user_input = data_preprocess.verify_change(user_input, 'Budget Categories', 'New Budget Categories')
+
+				else:
+
+					user_input['Budget Categories'] = {info['Categoria']: info['Limite']}
+
 
 
 		col1.markdown("## Limite de gastos por categoria mensal:")
 
-		limits_table = data_preprocess.define_limits_table(visualize_df, user_data)
+		limits_table = data_preprocess.define_limits_table(visualize_df, user_input)
 
 		col1.dataframe(limits_table.drop(['Dividido', 'Mês', 'Ultrapassou', 'Color'], axis=1).style.highlight_max(axis=1), width=1000)
 
-        if user_data['Link Changed']:
+		if user_input['Change']:
 
-            collection.insert_one(user_data)
+			collection.updateOne({"email": user_input['email']}, user_input)
+
+			user_input['Change'] = False
 

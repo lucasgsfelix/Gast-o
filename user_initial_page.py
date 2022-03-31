@@ -67,7 +67,7 @@ def treat_input_sheet(needed_input, col):
 	return valid_execution, user_sheet
 
 
-def define_user_inputs(needed_input={}):
+def define_user_inputs(needed_input, collection):
 	"""
 
 		Inputs needed from the user:
@@ -89,9 +89,11 @@ def define_user_inputs(needed_input={}):
 
 	col.markdown("# Olá, seja bem-vindo ao Gastão!")
 
-	needed_input['email'] = col.text_input("Digite seu e-mail:", " ")
+	needed_input['email'] = col.text_input("Digite seu e-mail:", "")
 
 	needed_input['valid e-mail'] = False
+
+	print(needed_input['email'])
 
 	if bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", needed_input['email'])):
 
@@ -100,21 +102,44 @@ def define_user_inputs(needed_input={}):
 
 	else:
 
-		if needed_input['email'] != ' ':
+		if needed_input['email'] != '':
 
 			col.error("E-mail inválido. Por favor, digite um e-mail válido para prosseguirmos.")
 
 
 	if 'valid e-mail' in needed_input.keys() and needed_input['valid e-mail']:
 
-		if needed_input['email'] in []:
+		queried_data = collection.find({'email': needed_input['email']})
+
+		if len(queried_data) > 0:
 
 			# needed_input, user_sheet, go_to_graphs
-			return retrieve_user_data(needed_input['email'])
 
-		else:
+			needed_input = queried_data[0]
 
-			col.markdown("## Precisamos de algumas informações suas para podermos prosseguir!")
+			valid_execution, user_sheet = treat_input_sheet(needed_input, col)
+
+			history_error = False
+
+			if valid_execution:
+
+				return queried_data[0], user_sheet, True
+
+			else:
+
+
+				# in this case the is an error with the user input sheet
+				history_error = True
+
+				col.markdown("## Houve um erro com a planilha que você passou anteriormente.\
+							  Por favor, insira novamente seus dados ou corrija sua planilha e reinicie o processo.")
+
+
+		if len(queried_data) == 0 or history_error:
+
+			if not history_error:
+
+				col.markdown("## Precisamos de algumas informações suas para podermos prosseguir!")
 
 			needed_input['link'] = col.text_input("Coloque aqui o link da sua planilha no GoogleSheets!", "")
 
