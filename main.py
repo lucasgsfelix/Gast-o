@@ -49,11 +49,15 @@ def insert_cache_variables(variables, key, new_variable):
 	return variables
 
 
+st.set_page_config(layout="wide", page_title="Gastão", page_icon="📊")
+
 if __name__ == '__main__':
 
-	st.set_page_config(layout="wide", page_title="Gastão", page_icon="📊")
+	print("First command")
 
 	variables = define_cache_variables()
+
+	print("Here?", variables['valid'])
 
 	if variables['established_connection']:
 
@@ -61,25 +65,8 @@ if __name__ == '__main__':
 
 		variables['established_connection'] = False
 
-	if not variables['valid']:
+	if variables['valid']:
 
-
-		user_input, og_df, variables['valid'], new_user = user_initial_page.define_user_inputs(variables['needed_input'],
-																					 variables['collection'])
-
-		if variables['valid']:
-		
-			variables = insert_cache_variables(variables, "og_df", og_df)
-			variables = insert_cache_variables(variables, "user_input", user_input)
-
-			collection = variables['collection']
-
-			if new_user:
-
-				collection.insert_one(variables['user_input'])
-
-
-	else:
 
 		# User json format:
 		# User name, User ID; Income (dict) - it can be several incomes;
@@ -230,6 +217,34 @@ if __name__ == '__main__':
 
 			collection = variables['collection']
 
+			user_input['Plot Start Date'] = str(user_input['Plot Start Date'])
+			user_input['Plot End Date'] = str(user_input['Plot End Date'])
+
 			collection.update_one({"email": user_input['email']}, {"$set": user_input}, True)
 
 			user_input['Change'] = False
+
+
+	else:
+
+
+		user_input, og_df, variables['valid'], new_user = user_initial_page.define_user_inputs(variables['needed_input'],
+																					 variables['collection'])
+
+		if variables['valid']:
+		
+			variables = insert_cache_variables(variables, "og_df", og_df)
+			variables = insert_cache_variables(variables, "user_input", user_input)
+
+			collection = variables['collection']
+
+			if new_user:
+
+				collection.insert_one(variables['user_input'])
+
+
+	print(variables['valid'])
+
+	st.button("")
+
+		

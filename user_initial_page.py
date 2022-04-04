@@ -89,20 +89,24 @@ def define_user_inputs(needed_input, collection=None):
 
 	col.markdown("# Olá, seja bem-vindo ao Gastão!")
 
-	needed_input['email'] = col.text_input("Digite seu e-mail:", "")
+	with col.form(key='input_email'):
 
-	needed_input['valid e-mail'] = False
+		needed_input['email'] = st.text_input("Digite seu e-mail:", "")
 
-	if bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", needed_input['email'])):
+		if st.form_submit_button("Entrar"):
 
-		needed_input['valid e-mail'] = True
+			needed_input['valid e-mail'] = False
+
+			if bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", needed_input['email'])):
+
+				needed_input['valid e-mail'] = True
 
 
-	else:
+			else:
 
-		if needed_input['email'] != '':
+				if needed_input['email'] != '':
 
-			col.error("E-mail inválido. Por favor, digite um e-mail válido para prosseguirmos.")
+					col.error("E-mail inválido. Por favor, digite um e-mail válido para prosseguirmos.")
 
 
 
