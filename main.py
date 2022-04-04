@@ -119,10 +119,6 @@ if __name__ == '__main__':
 		visualize_df = visualize_df[(visualize_df['Data'].dt.date >= user_input['Plot Start Date']) &
 									(visualize_df['Data'].dt.date <= user_input['Plot End Date'])]
 
-		user_input['new link'] = st.sidebar.text_input("Avaliar outra planilha do GoogleSheets!", user_input['link'])
-
-		user_input = data_preprocess.verify_change(user_input, 'link', 'new link')
-
 
 		expenses_categories = visualize_df['Descrição'].unique().tolist() + user_input['Expenses']
 		user_input['New Expenses'] = st.sidebar.multiselect("Quais são os seus gastos mensais?", expenses_categories,
@@ -225,6 +221,46 @@ if __name__ == '__main__':
 			user_input['Change'] = False
 
 
+		user_input['new link'] = st.sidebar.text_input("Avaliar outra planilha do GoogleSheets!", '')
+
+		update_sheet = st.sidebar.button("Atualizar planilha atual")
+
+		if user_input['new link'] != '' or update_sheet:
+
+			main_column = 'new link'
+
+			if update_sheet:
+
+				main_column = 'link'
+
+			valid_execution, new_df = user_initial_page.treat_input_sheet(user_input, st.sidebar, main_column)
+
+			variables['og_df'] = new_df
+
+			if valid_execution:
+
+
+				if update_sheet:
+
+					user_input = data_preprocess.verify_change(user_input, 'link', 'new link')
+
+					user_input['new link'] = ''
+
+				familiar_categories, _ = data_preprocess.retrieve_categories(new_df)
+
+				og_df = data_preprocess.data_treatment(new_df)
+
+				variables['og_df'] = og_df
+
+				user_input['Expenses'] = familiar_categories['Expenses']
+
+				user_input['Savings'] = familiar_categories['Savings']
+
+				user_input['Income'] = familiar_categories['Income']
+
+				variables['user_input'] = user_input
+
+
 	else:
 
 
@@ -241,10 +277,5 @@ if __name__ == '__main__':
 			if new_user:
 
 				collection.insert_one(variables['user_input'])
-
-
-	print(variables['valid'])
-
-	st.button("")
 
 		

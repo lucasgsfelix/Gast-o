@@ -11,12 +11,12 @@ import validators
 import data_preprocess
 
 
-def treat_input_sheet(needed_input, col):
+def treat_input_sheet(needed_input, col, link_column='link'):
 
 	user_sheet, valid_execution = None, False
 
 
-	if validators.url(needed_input['link']):
+	if validators.url(needed_input[link_column]):
 
 		# in this case is a valid link
 
@@ -25,7 +25,7 @@ def treat_input_sheet(needed_input, col):
 
 		try:
 		
-			user_sheet = data_preprocess.download_google_drive_sheet(needed_input['link'])
+			user_sheet = data_preprocess.download_google_drive_sheet(needed_input[link_column])
 
 		except:
 
