@@ -40,7 +40,7 @@ def init_connection():
 	return collection
 
 
-@st.cache(allow_output_mutation=True, show_spinner=False)
+#@st.cache(allow_output_mutation=True, show_spinner=False)
 def define_cache_variables():
 
 
@@ -63,6 +63,8 @@ if __name__ == '__main__':
 
 
 	random.seed()
+
+	print(random.uniform(0, 100000))
 
 	session_state = SessionState.get(variables=define_cache_variables(), user_id=random.uniform(0, 100000))
 

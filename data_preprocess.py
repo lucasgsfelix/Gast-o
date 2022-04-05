@@ -85,7 +85,6 @@ def define_credit_card_expenses(user_sheet):
 
 
 
-@st.cache(allow_output_mutation=True, show_spinner=False)
 def read_data(user_info, link):
 
 	user_sheet = download_google_drive_sheet(link)
@@ -101,7 +100,7 @@ def read_data(user_info, link):
 	return user_sheet
 
 
-@st.cache(allow_output_mutation=True, show_spinner=False)
+
 def data_treatment(user_sheet):
 
 	user_sheet['Data'] = pd.to_datetime(user_sheet['Data'], format='%d/%m/%Y')
