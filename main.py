@@ -24,14 +24,8 @@ import urllib
 
 def init_connection():
 
-	#client =  pymongo.MongoClient(**st.secrets["mongo"])
 
-	print(st.secrets['mongo'])
-
-	# 
 	client = pymongo.MongoClient("mongodb+srv://gastao_user:" + urllib.parse.quote_plus(st.secrets["mongo"]['password']) + "@gastao.n3j3j.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
-	
-	#db = client.test
 
 
 	db = client.test
