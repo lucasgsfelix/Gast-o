@@ -62,6 +62,8 @@ st.set_page_config(layout="wide", page_title="Gastão", page_icon="📊")
 if __name__ == '__main__':
 
 
+	random.seed()
+
 	session_state = SessionState.get(variables=define_cache_variables(), user_id=random.uniform(0, 100000))
 
 	if session_state.variables['established_connection']:
