@@ -19,13 +19,16 @@ import streamlit as st
 import plotly.express as px
 
 import pymongo
+import urllib
 
 
 def init_connection():
 
-	client =  pymongo.MongoClient(**st.secrets["mongo"])
 
-	db = client['gastao']
+	client = pymongo.MongoClient("mongodb+srv://gastao_user:" + urllib.parse.quote_plus(st.secrets["mongo"]['password']) + "@gastao.n3j3j.mongodb.net/myFirstDatabase?retryWrites=true&w=majority")
+
+
+	db = client.test
 
 	collection = db['gastao']
 
