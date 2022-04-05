@@ -242,8 +242,7 @@ if __name__ == '__main__':
 
 			if valid_execution:
 
-
-				if update_sheet:
+				if not update_sheet:
 
 					user_input = data_preprocess.verify_change(user_input, 'link', 'new link')
 
