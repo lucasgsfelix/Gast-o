@@ -67,7 +67,7 @@ def treat_input_sheet(needed_input, col, link_column='link'):
 	return valid_execution, user_sheet
 
 
-def define_user_inputs(needed_input, collection=None):
+def define_user_inputs(session_state):
 	"""
 
 		Inputs needed from the user:
@@ -82,138 +82,139 @@ def define_user_inputs(needed_input, collection=None):
 
 	"""
 
-	_, col, _ = st.columns((70, 70, 70))
 
-	user_sheet, go_to_graphs, valid_execution = None, False, False
+	session_state.user_sheet, session_state.go_to_graphs, session_state.valid_execution = None, False, False
 
+	session_state.collection = session_state.variables['collection']
 
 	col.markdown("# Olá, seja bem-vindo ao Gastão!")
 
 	with col.form(key='input_email'):
 
-		needed_input['email'] = st.text_input("Digite seu e-mail:", "")
+		session_state.variables['needed_input']['email'] = st.text_input("Digite seu e-mail:", "")
 
 		if st.form_submit_button("Entrar"):
 
-			needed_input['valid e-mail'] = False
+			session_state.variables['needed_input']['valid e-mail'] = False
 
-			if bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", needed_input['email'])):
+			if bool(re.search(r"^[\w\.\+\-]+\@[\w]+\.[a-z]{2,3}$", session_state.variables['needed_input']['email'])):
 
-				needed_input['valid e-mail'] = True
+				session_state.variables['needed_input']['valid e-mail'] = True
 
 
 			else:
 
-				if needed_input['email'] != '':
+				if session_state.variables['needed_input']['email'] != '':
 
 					col.error("E-mail inválido. Por favor, digite um e-mail válido para prosseguirmos.")
 
 
 
-	if 'valid e-mail' in needed_input.keys() and needed_input['valid e-mail'] and collection is not None:
+	if 'valid e-mail' in session_state.variables['needed_input'].keys() and session_state.variables['needed_input']['valid e-mail'] and session_state.collection is not None:
 
-		queried_data = collection.find({'email': needed_input['email']})
+		session_state.queried_data = session_state.collection.find({'email': session_state.variables['needed_input']['email']})
 
-		queried_data = [data for data in queried_data]
+		session_state.queried_data = [data for data in session_state.queried_data]
 
-		history_error = False
+		session_state.history_error = False
 
-		if len(queried_data) > 0:
+		if len(session_state.queried_data) > 0:
 
 			# needed_input, user_sheet, go_to_graphs
 
-			needed_input = queried_data[0]
+			session_state.variables['needed_input'] = session_state.queried_data[0]
 
-			valid_execution, user_sheet = treat_input_sheet(needed_input, col)
+			session_state.valid_execution, session_state.user_sheet = treat_input_sheet(session_state.variables['needed_input'], col)
 
-			if valid_execution:
+			if session_state.valid_execution:
 
-				return queried_data[0], user_sheet, True, False
+				return session_state.queried_data[0], session_state.user_sheet, True, False
 
 			else:
 
 
 				# in this case the is an error with the user input sheet
-				history_error = True
+				session_state.history_error = True
 
 				col.markdown("## Houve um erro com a planilha que você passou anteriormente.\
 							  Por favor, insira novamente seus dados ou corrija sua planilha e reinicie o processo.")
 
 
-		if len(queried_data) == 0 or history_error:
+		if len(session_state.queried_data) == 0 or session_state.history_error:
 
-			if not history_error:
+			if not session_state.history_error:
 
 				col.markdown("## Precisamos de algumas informações suas para podermos prosseguir!")
 
-			needed_input['link'] = col.text_input("Coloque aqui o link da sua planilha no GoogleSheets!", "")
+			session_state.variables['needed_input']['link'] = col.text_input("Coloque aqui o link da sua planilha no GoogleSheets!", "")
 
 			col.info("Não se esqueça que a sua planilha deve ser pública para podermos acessar!")
 
 
-			if needed_input['link'] != '':
+			if session_state.variables['needed_input']['link'] != '':
 
-				valid_execution, user_sheet = treat_input_sheet(needed_input, col)
+				session_state.valid_execution, session_state.user_sheet = treat_input_sheet(session_state.variables['needed_input'], col)
 
-			go_to_graphs = False
+			session_state.go_to_graphs = False
 
-			if valid_execution:
+			if session_state.valid_execution:
 
-				valid_execution = False
+				session_state.valid_execution = False
 
 				### all the data is valid
-				familiar_categories, identified = data_preprocess.retrieve_categories(user_sheet)
+				session_state.familiar_categories, session_state.identified = data_preprocess.retrieve_categories(session_state.user_sheet)
 
 
-				if identified:
+				if session_state.identified:
 
 					col.success("Foram identificadas algumas categorias!")
 
-				categories = user_sheet['Categoria'].unique()
+				session_state.categories = session_state.user_sheet['Categoria'].unique()
 
-				expenses_categories = user_sheet['Descrição'].unique().tolist() + familiar_categories['Expenses']
+				session_state.expenses_categories = session_state.user_sheet['Descrição'].unique().tolist() + session_state.familiar_categories['Expenses']
 				col.write("<b><center>Quais são os seus gastos mensais? (Aqueles que se repetem)</center></b>", unsafe_allow_html=True)
-				needed_input['Expenses'] = col.multiselect("", expenses_categories, familiar_categories['Expenses'])
+				session_state.variables['needed_input']['Expenses'] = col.multiselect("", session_state.expenses_categories, session_state.familiar_categories['Expenses'])
 
 
-				economy_categories = user_sheet['Categoria'].unique().tolist() + familiar_categories['Savings']
+				session_state.economy_categories = session_state.user_sheet['Categoria'].unique().tolist() + session_state.familiar_categories['Savings']
 				col.write("<b><center>Quais são suas categorias de economia?</center></b>", unsafe_allow_html=True)
-				needed_input['Savings'] = col.multiselect('', economy_categories, familiar_categories['Savings'])
+				session_state.variables['needed_input']['Savings'] = col.multiselect('', session_state.economy_categories, session_state.familiar_categories['Savings'])
 
-				income_categories = user_sheet['Categoria'].unique().tolist() + familiar_categories['Income']
+				session_state.income_categories = session_state.user_sheet['Categoria'].unique().tolist() + session_state.familiar_categories['Income']
 				col.write("<b><center>Quais são suas categorias de fonte de renda? (Salário)</center></b>", unsafe_allow_html=True)
-				needed_input['Income'] = col.multiselect("", income_categories, familiar_categories['Income'])
+				session_state.variables['needed_input']['Income'] = col.multiselect("", session_state.income_categories, session_state.familiar_categories['Income'])
 
 
 				with col.form(key='categories'):
 
-					info = {}
+					session_state.info = {}
 
 					col.write("<b><center>Qual é o seu limite de gasto mensal para cada categoria?</center></b>", unsafe_allow_html=True)
 
-					info['Categoria'] = col.selectbox("Categoria", categories)
-					info['Limite'] = col.number_input("Limite de Gasto", min_value=0, value=500)
+					session_state.info['Categoria'] = col.selectbox("Categoria", session_state.categories)
+					session_state.info['Limite'] = col.number_input("Limite de Gasto", min_value=0, value=500)
 
 					if col.button(label="Salvar limite de gasto!"):
 
-						if 'Budget Categories' in needed_input.keys():
+						if 'Budget Categories' in session_state.variables['needed_input'].keys():
 
-							needed_input['Budget Categories'] = {**needed_input['Budget Categories'], info['Categoria']: info['Limite']}
+							session_state.variables['needed_input']['Budget Categories'] = {**session_state.variables['needed_input']['Budget Categories'],
+																   session_state.info['Categoria']: session_state.info['Limite']}
 
 							# in this case there is already a budget for some categories
 
 						else:
 
-							needed_input['Budget Categories'] = {info['Categoria']: info['Limite']}
+							session_state.variables['needed_input']['Budget Categories'] = {session_state.info['Categoria']: session_state.info['Limite']}
 
 
-						budgets = [category + " " + str(budget)  for category, budget in needed_input['Budget Categories'].items()]
+						session_state.budgets = [category + " " + str(budget)  for category, budget in session_state.variables['needed_input']['Budget Categories'].items()]
 
-						col.code(', '.join(budgets))
-
-
-				go_to_graphs = col.button("Enviar informações!")
+						col.code(', '.join(session_state.budgets))
 
 
-	return needed_input, user_sheet, go_to_graphs, True
+				session_state.go_to_graphs = col.button("Enviar informações!")
+
+
+	return session_state.variables['needed_input'], session_state.user_sheet, session_state.go_to_graphs, True
 
