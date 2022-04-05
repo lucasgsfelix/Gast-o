@@ -82,6 +82,7 @@ def define_user_inputs(session_state):
 
 	"""
 
+	col_a, col, col_b = st.columns(3)
 
 	session_state.user_sheet, session_state.go_to_graphs, session_state.valid_execution = None, False, False
 
