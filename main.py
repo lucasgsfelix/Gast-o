@@ -178,7 +178,10 @@ if __name__ == '__main__':
 
 		col1.dataframe(session_state.visualize_df.drop(['Mês', 'index'], axis=1, errors='ignore'), width=1000)
 
+		session_state.expenses_df = session_state.og_df[~(session_state.og_df['Categoria'].isin(session_state.user_input['Income'] + session_state.user_input['Savings']))]
 		
+		visualization.plot_biweekly_expenses(col2, session_state.expenses_df)
+
 		# anual
 		visualization.plot_kpis(session_state.metrics, "Anual", col2,
 											  session_state.og_df, session_state.user_input['Income'])

@@ -3,6 +3,7 @@ import pandas as pd
 import streamlit as st
 
 import data_preprocess
+from dateutil.relativedelta import relativedelta
 
 
 def plot_kpis(metrics, header, column, og_df, income_columns):
@@ -26,6 +27,52 @@ def plot_kpis(metrics, header, column, og_df, income_columns):
 		column.metric("Gasto a mais:", "R$ " + str(round(metrics['Diff'], 2)), str(metrics['Percentage Expend'].round(2)) + '%')
 
 	column.metric("Poupança & Investimentos: ", "R$ " + str(metrics['Current Savings']), "R$ " + str(metrics['Last Savings']))
+
+
+
+def plot_biweekly_expenses(column, df):
+
+
+	# expenses dataframe
+	current_day = datetime.datetime.now()
+
+	last_biweek = datetime.datetime.now() - relativedelta(days=15)
+
+	last_biweek_expenses = df[(df['Data'] >= last_biweek) & (df['Data'] <= current_day)]['Quantia'].sum()
+
+	# last month data
+	total_expenses_last_month = df[df['Mês'] == current_day.month - 1]['Quantia'].sum()
+
+	total_expenses = df[df['Mês'] == current_day.month]['Quantia'].sum()
+
+	df['Dia'] = df['Data'].dt.day
+
+	df['Ano'] = df['Data'].dt.year
+
+	first_biweek_last_month = df[(df['Mês'] == current_day.month - 1) & (df['Dia'] <= 15)]['Quantia'].sum()
+
+	second_biweek_last_month = df[(df['Mês'] == current_day.month - 1) & (df['Dia'] > 15)]['Quantia'].sum()
+
+	mean_expenses_first_biweek = df[(df['Ano'] == current_day.year) & (df['Dia'] <= 15)]['Quantia'].sum()/len(df['Mês'].unique())
+
+	mean_expenses_second_biweek = df[(df['Ano'] == current_day.year) & (df['Dia'] > 15)]['Quantia'].sum()/len(df['Mês'].unique())
+
+	column.header('Avaliação quinzenal:')
+
+	column.metric("Gasto nos últimos 15 dias: ", "R$" + str(round(last_biweek_expenses, 2)))
+
+	column.metric("Gasto total 1ª quinzena mês anterior: ", "R$" + str(round(first_biweek_last_month, 2)))
+
+	column.metric("Gasto total 2ª quinzena mês anterior: ", "R$" + str(round(second_biweek_last_month, 2)))
+
+	column.metric("Gasto médio 1ª quinzena do mês: ", "R$" + str(round(mean_expenses_first_biweek, 2)))
+
+	column.metric("Gasto médio 2ª quinzena do mês: ", "R$" + str(round(mean_expenses_second_biweek, 2)))
+
+	column.metric("Gasto total no último mês: ", "R$" + str(round(total_expenses_last_month, 2)))
+
+	column.metric("Gasto total mês atual: ", "R$" + str(round(total_expenses, 2)))
+
 
 
 def plot_paid_monthly_expensives(user_data, column, expenses):
